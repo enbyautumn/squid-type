@@ -1,6 +1,6 @@
 require('esbuild').build({
-    entryPoints: ['main.ts'],
-    outfile: 'out.js',
+    entryPoints: ['peer.ts', 'client.ts'],
+    outdir: 'build',
     bundle: true,
     watch: {
         onRebuild(error, result) {
