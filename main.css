@@ -1,0 +1,11 @@
+.untyped {
+    background-color: gray;
+}
+
+.correct {
+    background-color: mediumspringgreen
+}
+
+.incorrect {
+    background-color: crimson;
+}
