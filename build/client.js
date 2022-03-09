@@ -4098,6 +4098,7 @@
   var import_peerjs = __toESM(require_peerjs_min());
   var peer = new import_peerjs.default();
   var conn;
+  var position = Math.random() * 100;
   peer.on("open", (id) => {
     console.log("My peer ID is: " + id);
   });
@@ -4105,14 +4106,17 @@
     let id = document.getElementById("peerid").value;
     conn = peer.connect(id);
     conn.on("data", (data) => {
-      console.log(data);
+      if (data == "start") {
+        setTimeout(() => {
+          conn.send({ "id": peer.id, "position": position });
+        }, 3e3);
+      }
+      if (data.id && data.id != peer.id) {
+        console.log(data);
+      }
     });
     conn.on("open", () => {
-      conn.send("hi!");
     });
   }
-  document.getElementById("send").addEventListener("click", () => {
-    conn.send("Hello!");
-  });
   document.getElementById("connect").addEventListener("click", connect);
 })();

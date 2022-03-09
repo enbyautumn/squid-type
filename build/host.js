@@ -4094,15 +4094,21 @@
     }
   });
 
-  // peer.ts
+  // host.ts
   var import_peerjs = __toESM(require_peerjs_min());
   var peer = new import_peerjs.default();
+  var delay = 5e3;
   var connections = [];
+  var connectionDisplay = document.getElementById("connections");
   peer.on("open", (id) => {
     console.log("My peer ID is: " + id);
+    document.getElementById("peerid").innerText = id;
   });
   peer.on("connection", (conn) => {
     connections.push(conn);
+    let li = document.createElement("li");
+    li.innerText = conn.peer;
+    connectionDisplay.appendChild(li);
     conn.on("data", (data) => {
       console.log(data);
       connections.forEach((c) => c.send(data));
@@ -4111,4 +4117,15 @@
       connections.forEach((c) => c.send("hi!"));
     });
   });
+  function start() {
+    connections.forEach((c) => {
+      c.send("start");
+    });
+    setTimeout(() => {
+      connections.forEach((c) => {
+        c.send("stop");
+      });
+    }, delay);
+  }
+  document.getElementById("start").addEventListener("click", start);
 })();

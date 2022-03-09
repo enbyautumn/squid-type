@@ -1,5 +1,5 @@
 require('esbuild').build({
-    entryPoints: ['peer.ts', 'client.ts'],
+    entryPoints: ['host.ts', 'client.ts'],
     outdir: 'build',
     bundle: true,
     watch: {
