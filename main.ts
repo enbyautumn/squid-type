@@ -1,9 +1,8 @@
 console.log("aeiou")
 let typer = document.getElementById("typer")
 let text = typer.innerText
-//let validLetters = new RegExp("[a-zA-Z0-9()\-:;.,?!\"']")
-// let validLetters = RegExp("[a-zA-Z0-9]")
-let validLetters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890,.".split('')
+let validLetters = new RegExp(/[a-zA-Z0-9()\-:;.,?!"']/m)
+
 
 console.log(text)
 
@@ -24,27 +23,23 @@ function clamp(number, min, max) {
     return number
 }
 
-function filter(c) {
-    let validLetters = RegExp("/[a-zA-Z0-9()\-:;.,?!\"']/")
-    if (validLetters.test(c)) {
-        console.log("based")
-    }
-}
 
 document.addEventListener("keydown", e => {
-    console.log(e.key)
-    console.log(validLetters.test(e.key))
     if (e.key == "Backspace") {
         currentPos--
     }
     else {
-        
-        if (e.key == text[currentPos]) {
-            currentPos++
+        if (e.key.length == 1 && validLetters.test(e.key)) {
+            console.log(e.key)
+            if (e.key != text[currentPos]) {
+                incorrect = true
+                incorrectStart = currentPos
+            }
+            currentPos++;
         }
         
     }
-        currentPos = clamp(currentPos, 0, text.length)
+    currentPos = clamp(currentPos, 0, text.length)
 
     let typedText = text.slice(0, currentPos)
     let untypedText = text.slice(currentPos, text.length)
