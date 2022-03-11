@@ -13,6 +13,7 @@ body {
     padding: 0;
     height: 100vh;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
 }
@@ -34,4 +35,30 @@ body {
 .incorrect {
     color: crimson;
     filter: drop-shadow(0px 0px 4px crimson);
+}
+
+.menu input[type='text'].full-width {
+    width: 100%;
+}
+
+.hidden {
+    opacity: 0;
+    transition: opacity 0.1s;
+}
+
+.completely-hidden {
+    display: none;
+}
+
+.playerlist {
+    color: whitesmoke;
+}
+
+.playerlist ul {
+    padding-inline-start: 0;
+}
+
+.playerlist lh {
+    font-size: 1.5em;
+    margin-left: -1em;
 }
