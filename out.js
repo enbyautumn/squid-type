@@ -1,6 +1,5 @@
 (() => {
   // main.ts
-  console.log("aeiou");
   var typer = document.getElementById("typer");
   var text = typer.innerText;
   text = text.replace(/[^a-zA-Z0-9()\-:;.,?!"' ]/g, "");
@@ -38,6 +37,7 @@
     }
     let correctText = text.slice(0, incorrectStart);
     let incorrectText = text.slice(incorrectStart, currentPos);
+    incorrectText = incorrectText.replaceAll(" ", "\u2591&#8203;");
     let untypedText = text.slice(currentPos, text.length);
     let formattedCorrect = `<span class = "correct">${correctText}</span>`;
     let formattedIncorrect = `<span class = "incorrect">${incorrectText}</span>`;

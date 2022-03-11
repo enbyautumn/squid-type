@@ -1,11 +1,37 @@
+@font-face {
+    font-family: Agave;
+    src: url('/fonts/agave\ regular\ Nerd\ Font\ Complete\ Mono.ttf');
+}
+
+* {
+    font-family: Agave, 'Courier New', Courier, monospace;
+}
+
+body {
+    background-color: #2b2b2b;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#typer {
+    width: 80vw;
+    font-size: 1.5rem;
+}
+
 .untyped {
-    background-color: gray;
+    color: gray;
 }
 
 .correct {
-    background-color: mediumspringgreen
+    color: mediumspringgreen;
+    filter: drop-shadow(0px 0px 1px mediumspringgreen);
 }
 
 .incorrect {
-    background-color: crimson;
+    color: crimson;
+    filter: drop-shadow(0px 0px 4px crimson);
 }

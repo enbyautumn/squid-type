@@ -1,4 +1,3 @@
-console.log("aeiou")
 let typer = document.getElementById("typer")
 let text = typer.innerText
 text = text.replace(/[^a-zA-Z0-9()\-:;.,?!"' ]/g, "")
@@ -27,6 +26,8 @@ function clamp(number, min, max) {//clamps a number between two bounds
 
 
 document.addEventListener("keydown", e => {
+
+    // incorrectStart is the proper measure for position
 
     if (e.key == "Backspace") { //on backspace, move the cursor back
         currentPos--
@@ -60,6 +61,8 @@ document.addEventListener("keydown", e => {
 
     let correctText = text.slice(0, incorrectStart)
     let incorrectText = text.slice(incorrectStart, currentPos)
+    // @ts-ignore
+    incorrectText = incorrectText.replaceAll(" ", "░&#8203;")
     let untypedText = text.slice(currentPos, text.length)
     //gets three chunks: correct text, incorrect text, untyped text
 
