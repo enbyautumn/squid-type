@@ -172,6 +172,9 @@ document.addEventListener("keydown", e => {
     if (role == Role.Client && e.key == "!") {
         console.log(positions)
     }
+    if (conn && role == Role.Client) {
+        conn.send("hello")
+    }
     if (inGame) {
         // incorrectStart is the proper measure for position to send to other players
 

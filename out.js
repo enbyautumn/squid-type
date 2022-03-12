@@ -4241,6 +4241,9 @@
     if (role == 1 /* Client */ && e.key == "!") {
       console.log(positions);
     }
+    if (conn && role == 1 /* Client */) {
+      conn.send("hello");
+    }
     if (inGame) {
       if (e.key == "Backspace") {
         currentPos--;
