@@ -41,6 +41,10 @@ body {
     width: 100%;
 }
 
+.menu #start {
+    width: 100%;
+}
+
 .hidden {
     opacity: 0;
     transition: opacity 0.1s;

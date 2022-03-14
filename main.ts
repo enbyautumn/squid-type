@@ -14,6 +14,8 @@ let incorrectStart = 0
 let incorrect = false
 
 let playerlistDisplay = document.getElementById("playerlist") as HTMLUListElement
+let statusDisplay = document.getElementById("status") as HTMLParagraphElement
+let startButton = document.getElementById("start") as HTMLButtonElement
 
 enum Role {
     Host,
@@ -32,6 +34,7 @@ enum MessageType {
     updatePosition,
     addPlayer, 
     sendPosition,
+    startGame,
 }
 
 let self: Player = new Player(0, null)
@@ -44,6 +47,8 @@ statuses[0] = {
     "position": 0,
     "eliminated": false,
 }
+let started = false
+let eliminated = false
 
 function handleMessage(data: any) {
     console.log(data.type as MessageType, data)
@@ -62,6 +67,9 @@ function handleMessage(data: any) {
                 break;
             case MessageType.sendPosition:
                 statuses[data.player].position = data.position;
+                break;
+            case MessageType.startGame:
+                started = true;
                 break;
         }
     } else if (role == Role.Host) {
@@ -107,6 +115,7 @@ document.getElementById("hostButton").addEventListener("click", () => {
                 eliminated: false
             }
             playerList.push(new Player(playerList.length, conn))
+            startButton.classList.remove("completely-hidden")
             updatePlayerlist()
         })
 
@@ -158,10 +167,17 @@ document.getElementById("joinButton").addEventListener("click", async () => {
     })
 })
 
+startButton.addEventListener("click", e => {
+    started = true
+    startButton.disabled = true
+    playerList.filter(p => p.conn != null).forEach(p => p.conn.send({"type": MessageType.startGame}))
+})
 
 document.addEventListener("keydown", e => {
-    console.log(statuses)
     // incorrectStart is the proper measure for position to send to other players
+
+    if (!started) return;
+    if (statuses[self.id] && statuses[self.id].eliminated) return;
 
     if (text[incorrectStart] == " " && !incorrect && role == Role.Client && conn) {
         conn.send({

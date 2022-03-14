@@ -4106,6 +4106,8 @@
   var incorrectStart = 0;
   var incorrect = false;
   var playerlistDisplay = document.getElementById("playerlist");
+  var statusDisplay = document.getElementById("status");
+  var startButton = document.getElementById("start");
   var Player = class {
     constructor(id, conn2) {
       this.id = id;
@@ -4122,6 +4124,7 @@
     "position": 0,
     "eliminated": false
   };
+  var started = false;
   function handleMessage(data) {
     console.log(data.type, data);
     if (role == 1 /* Client */) {
@@ -4139,6 +4142,9 @@
           break;
         case 2 /* sendPosition */:
           statuses[data.player].position = data.position;
+          break;
+        case 3 /* startGame */:
+          started = true;
           break;
       }
     } else if (role == 0 /* Host */) {
@@ -4180,6 +4186,7 @@
           eliminated: false
         };
         playerList.push(new Player(playerList.length, conn2));
+        startButton.classList.remove("completely-hidden");
         updatePlayerlist();
       });
       conn2.on("data", handleMessage);
@@ -4222,8 +4229,16 @@
       document.getElementById("joinButton").disabled = false;
     });
   });
+  startButton.addEventListener("click", (e) => {
+    started = true;
+    startButton.disabled = true;
+    playerList.filter((p) => p.conn != null).forEach((p) => p.conn.send({ "type": 3 /* startGame */ }));
+  });
   document.addEventListener("keydown", (e) => {
-    console.log(statuses);
+    if (!started)
+      return;
+    if (statuses[self.id] && statuses[self.id].eliminated)
+      return;
     if (text[incorrectStart] == " " && !incorrect && role == 1 /* Client */ && conn) {
       conn.send({
         "type": 2 /* sendPosition */,
