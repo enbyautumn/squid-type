@@ -4096,181 +4096,174 @@
 
   // main.ts
   var import_peerjs = __toESM(require_peerjs_min());
+  var clamp = (number, min, max) => number < min ? min : number > max ? max : number;
   var typer = document.getElementById("typer");
   var text = typer.innerText;
   text = text.replace(/[^a-zA-Z0-9()\-:;.,?!"' ]/g, "");
   typer.innerHTML = `<span class = "untyped">${text}</span>`;
   var validLetters = new RegExp(/[a-zA-Z0-9()\-:;.,?!"' ]/m);
-  var inGame = false;
-  var playerNumber;
-  var role;
-  var connections = [];
-  var conn;
-  var connectionDisplay = document.getElementById("playerlist");
-  var peer = new import_peerjs.default();
-  var positions = {};
   var currentPos = 0;
   var incorrectStart = 0;
   var incorrect = false;
-  function clamp(number, min, max) {
-    if (number < min) {
-      number = min;
-    } else if (number > max) {
-      number = max;
+  var playerlistDisplay = document.getElementById("playerlist");
+  var Player = class {
+    constructor(id, conn2) {
+      this.id = id;
+      this.conn = conn2;
     }
-    return number;
-  }
-  function updatePositions() {
-    if (role == 0 /* Host */) {
-      connections.forEach((c) => c.send("sendPosition"));
-      connections.forEach((c) => c.send({
-        "type": "updatePosition",
-        "player": playerNumber,
-        "position": incorrectStart
-      }));
-      positions[playerNumber] = incorrectStart;
-      console.log(playerNumber);
-      console.log(positions);
-    }
-  }
-  peer.on("open", (id) => {
-    console.log("My peer ID is: " + id);
-  });
-  peer.on("connection", (conn2) => {
-    console.log("connection made");
-    connections.push(conn2);
-    let li = document.createElement("li");
-    let playerNum = connections.length + 1;
-    li.innerText = `Player ${playerNum}`;
-    connectionDisplay.appendChild(li);
-    conn2.on("data", (data) => {
-      console.log(data);
-      console.log(conn2.peer);
-      if (data.type && data.type == "updatePosition") {
-        positions[data.player] = data.position;
-        console.log(positions);
-      }
-      connections.filter((c) => c.peer != conn2.peer).forEach((c) => c.send(data));
-    });
-    conn2.on("open", () => {
-      conn2.send({
-        playerNumber: playerNum
-      });
-      connections.forEach((c) => c.send({
-        "addPlayer": playerNum
-      }));
-    });
-  });
-  var initClientConn = () => {
-    conn.on("open", () => {
-      console.log("connection opened");
-      let li = document.createElement("li");
-      li.innerText = `Player ${1}`;
-      connectionDisplay.appendChild(li);
-      conn.on("data", (data) => {
-        if (data.playerNumber) {
-          playerNumber = data.playerNumber;
-        }
-        if (data.addPlayer) {
-          connectionDisplay.querySelectorAll("li").forEach((li2) => {
-            li2.remove();
-          });
-          for (let i = 0; i < data.addPlayer; i++) {
-            let li2 = document.createElement("li");
-            li2.innerText = `Player ${i + 1} ${i + 1 == playerNumber ? "(You)" : ""}`;
-            connectionDisplay.appendChild(li2);
-          }
-        }
-        if (data == "sendPosition") {
-          conn.send({
-            "type": "updatePosition",
-            "player": playerNumber,
-            "position": incorrectStart
-          });
-          positions[playerNumber] = incorrectStart;
-        }
-        if (data.type && data.type == "updatePosition") {
-          positions[data.player] = data.position;
-        }
-        console.log(data);
-      });
-    });
   };
-  document.getElementById("hostButton").addEventListener("click", () => {
-    if (!peer.id) {
-      return;
+  var self = new Player(0, null);
+  var peer = new import_peerjs.default();
+  var conn;
+  var role;
+  var playerList = [];
+  var statuses = {};
+  statuses[0] = {
+    "position": 0,
+    "eliminated": false
+  };
+  function handleMessage(data) {
+    console.log(data.type, data);
+    if (role == 1 /* Client */) {
+      switch (data.type) {
+        case 0 /* updatePosition */:
+          statuses = data.statuses;
+          updatePlayerlist();
+          break;
+        case 1 /* addPlayer */:
+          self.id = data.playerNumber;
+          statuses[data.playerNumber] = {
+            "position": 0,
+            "eliminated": false
+          };
+          break;
+        case 2 /* sendPosition */:
+          statuses[data.player].position = data.position;
+          break;
+      }
+    } else if (role == 0 /* Host */) {
+      switch (data.type) {
+        case 2 /* sendPosition */:
+          statuses[data.player].position = data.position;
+          playerList.filter((p) => p.conn != null).forEach((p) => p.conn.send(data));
+          break;
+      }
     }
+  }
+  function updatePlayerlist() {
+    if (role == 0 /* Host */) {
+      playerList.filter((p) => p.conn != null).forEach((p) => p.conn.send({ "type": 0 /* updatePosition */, "statuses": statuses }));
+    }
+    document.querySelectorAll(".player").forEach((e) => e.remove());
+    for (let id in statuses) {
+      let status = statuses[id];
+      let li = document.createElement("li");
+      li.classList.add("player");
+      li.innerText = `Player ${id} ${id == self.id.toString() ? "(You)" : ""}`;
+      playerlistDisplay.appendChild(li);
+    }
+  }
+  document.getElementById("hostButton").addEventListener("click", () => {
+    if (!peer.id)
+      return;
     role = 0 /* Host */;
-    let li = document.createElement("li");
-    playerNumber = connections.length + 1;
-    li.innerText = `Player ${playerNumber} (You)`;
-    connectionDisplay.appendChild(li);
+    playerList.push(self);
+    peer.on("connection", (conn2) => {
+      console.log("connection made");
+      conn2.on("open", () => {
+        conn2.send({
+          "type": 1 /* addPlayer */,
+          "playerNumber": playerList.length
+        });
+        statuses[playerList.length] = {
+          position: 0,
+          eliminated: false
+        };
+        playerList.push(new Player(playerList.length, conn2));
+        updatePlayerlist();
+      });
+      conn2.on("data", handleMessage);
+    });
     document.getElementById("hostButton").classList.add("completely-hidden");
     document.getElementById("join").classList.add("hidden");
     document.getElementById("roomid").classList.add("full-width");
     document.getElementById("roomid").value = peer.id;
   });
-  document.getElementById("joinButton").addEventListener("click", () => {
-    if (!peer.id) {
+  document.getElementById("joinButton").addEventListener("click", async () => {
+    if (!peer.id)
       return;
-    }
-    role = 1 /* Client */;
     let id = document.getElementById("joinid").value;
-    if (!id) {
+    if (!id)
       return;
-    }
-    console.log(id);
-    conn = peer.connect(id);
-    initClientConn();
-    document.getElementById("joinButton").classList.add("completely-hidden");
-    document.getElementById("host").classList.add("hidden");
-    document.getElementById("joinid").classList.add("full-width");
     document.getElementById("joinid").disabled = true;
+    document.getElementById("joinButton").disabled = true;
+    let connectPromise = new Promise((resolve, reject) => {
+      conn = peer.connect(id);
+      conn.on("open", () => {
+        resolve("connected");
+      });
+      conn.on("error", (err) => {
+        reject(err);
+      });
+      setTimeout(() => {
+        reject("timeout");
+      }, 3e3);
+    });
+    await connectPromise.then((r) => {
+      console.log(r);
+      role = 1 /* Client */;
+      conn.on("data", handleMessage);
+      document.getElementById("joinButton").classList.add("completely-hidden");
+      document.getElementById("host").classList.add("hidden");
+      document.getElementById("joinid").classList.add("full-width");
+    }).catch((e) => {
+      console.log(e);
+      document.getElementById("joinid").disabled = false;
+      document.getElementById("joinButton").disabled = false;
+    });
   });
   document.addEventListener("keydown", (e) => {
-    if (conn && e.key == "`") {
-      console.log("sending hi");
-      conn.send("HI");
+    console.log(statuses);
+    if (text[incorrectStart] == " " && !incorrect && role == 1 /* Client */ && conn) {
+      conn.send({
+        "type": 2 /* sendPosition */,
+        "player": self.id,
+        "position": incorrectStart
+      });
     }
-    if (e.key == "@") {
-      inGame = true;
+    if (text[incorrectStart] == " " && !incorrect && role == 0 /* Host */) {
+      statuses[0].position = incorrectStart;
+      playerList.filter((p) => p.conn != null).forEach((p) => p.conn.send({
+        "type": 2 /* sendPosition */,
+        "player": self.id,
+        "position": incorrectStart
+      }));
     }
-    if (role == 0 /* Host */ && e.key == "!") {
-      updatePositions();
-    }
-    if (role == 1 /* Client */ && e.key == "!") {
-      console.log(positions);
-    }
-    if (conn && role == 1 /* Client */) {
-      conn.send("hello");
-    }
-    if (inGame) {
-      if (e.key == "Backspace") {
-        currentPos--;
-        if (currentPos <= incorrectStart) {
-          incorrect = false;
-        }
-      } else {
-        if (e.key.length == 1 && validLetters.test(e.key)) {
-          if (e.key != text[currentPos] && !incorrect) {
-            incorrectStart = currentPos;
-            incorrect = true;
-          }
-          currentPos++;
-        }
+    if (e.key == "Backspace") {
+      currentPos--;
+      if (currentPos <= incorrectStart) {
+        incorrect = false;
       }
-      currentPos = clamp(currentPos, 0, text.length);
-      if (!incorrect) {
-        incorrectStart = currentPos;
+    } else {
+      if (e.key.length == 1 && validLetters.test(e.key)) {
+        if (e.key != text[currentPos] && !incorrect) {
+          incorrectStart = currentPos;
+          incorrect = true;
+        }
+        currentPos++;
       }
-      let correctText = text.slice(0, incorrectStart);
-      let incorrectText = text.slice(incorrectStart, currentPos);
-      incorrectText = incorrectText.replaceAll(" ", "\u2591&#8203;");
-      let untypedText = text.slice(currentPos, text.length);
-      let formattedCorrect = `<span class = "correct">${correctText}</span>`;
-      let formattedIncorrect = `<span class = "incorrect">${incorrectText}</span>`;
-      let formattedUntyped = `<span class = "untyped">${untypedText}</span>`;
-      typer.innerHTML = formattedCorrect + formattedIncorrect + formattedUntyped;
     }
+    currentPos = clamp(currentPos, 0, text.length);
+    if (!incorrect) {
+      incorrectStart = currentPos;
+    }
+    let correctText = text.slice(0, incorrectStart);
+    let incorrectText = text.slice(incorrectStart, currentPos);
+    incorrectText = incorrectText.replaceAll(" ", "\u2591&#8203;");
+    let untypedText = text.slice(currentPos, text.length);
+    let formattedCorrect = `<span class = "correct">${correctText}</span>`;
+    let formattedIncorrect = `<span class = "incorrect">${incorrectText}</span>`;
+    let formattedUntyped = `<span class = "untyped">${untypedText}</span>`;
+    typer.innerHTML = formattedCorrect + formattedIncorrect + formattedUntyped;
   });
 })();
