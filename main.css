@@ -47,7 +47,7 @@ body {
 
 .hidden {
     opacity: 0;
-    transition: opacity 0.1s;
+    transition: opacity 0.3s;
 }
 
 .completely-hidden {

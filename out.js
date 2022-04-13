@@ -4102,157 +4102,89 @@
   text = text.replace(/[^a-zA-Z0-9()\-:;.,?!"' ]/g, "");
   typer.innerHTML = `<span class = "untyped">${text}</span>`;
   var validLetters = new RegExp(/[a-zA-Z0-9()\-:;.,?!"' ]/m);
+  function getWords() {
+    let req = new XMLHttpRequest();
+    req.open("GET", "https://xkcd.com/simplewriter/words.js", false);
+    req.send();
+    req.response[0] = "m///o";
+    return req.response.match(/(?<=["|])(.*?)(?=["|])/gm).map((s) => s.replaceAll(/[^a-zA-Z0-9()\-:;.,?!"' ]/gm, ""));
+  }
+  console.log(getWords());
   var currentPos = 0;
   var incorrectStart = 0;
   var incorrect = false;
   var playerlistDisplay = document.getElementById("playerlist");
   var statusDisplay = document.getElementById("status");
   var startButton = document.getElementById("start");
-  var Player = class {
-    constructor(id, conn2) {
-      this.id = id;
-      this.conn = conn2;
-    }
-  };
-  var self = new Player(0, null);
+  var hostButtom = document.getElementById("hostButton");
+  var joinButton = document.getElementById("joinButton");
   var peer = new import_peerjs.default();
   var conn;
-  var role;
-  var playerList = [];
-  var statuses = {};
-  statuses[0] = {
-    "position": 0,
-    "eliminated": false
-  };
+  var host = false;
+  var connected = false;
+  var opponentPos = 0;
   var started = false;
-  function handleMessage(data) {
-    console.log(data.type, data);
-    if (role == 1 /* Client */) {
-      switch (data.type) {
-        case 0 /* updatePosition */:
-          statuses = data.statuses;
-          updatePlayerlist();
-          break;
-        case 1 /* addPlayer */:
-          self.id = data.playerNumber;
-          statuses[data.playerNumber] = {
-            "position": 0,
-            "eliminated": false
-          };
-          break;
-        case 2 /* sendPosition */:
-          statuses[data.player].position = data.position;
-          break;
-        case 3 /* startGame */:
-          started = true;
-          break;
-      }
-    } else if (role == 0 /* Host */) {
-      switch (data.type) {
-        case 2 /* sendPosition */:
-          statuses[data.player].position = data.position;
-          playerList.filter((p) => p.conn != null).forEach((p) => p.conn.send(data));
-          break;
-      }
-    }
-  }
-  function updatePlayerlist() {
-    if (role == 0 /* Host */) {
-      playerList.filter((p) => p.conn != null).forEach((p) => p.conn.send({ "type": 0 /* updatePosition */, "statuses": statuses }));
-    }
-    document.querySelectorAll(".player").forEach((e) => e.remove());
-    for (let id in statuses) {
-      let status = statuses[id];
-      let li = document.createElement("li");
-      li.classList.add("player");
-      li.innerText = `Player ${id} ${id == self.id.toString() ? "(You)" : ""}`;
-      playerlistDisplay.appendChild(li);
-    }
-  }
-  document.getElementById("hostButton").addEventListener("click", () => {
-    if (!peer.id)
-      return;
-    role = 0 /* Host */;
-    playerList.push(self);
-    peer.on("connection", (conn2) => {
-      console.log("connection made");
-      conn2.on("open", () => {
-        conn2.send({
-          "type": 1 /* addPlayer */,
-          "playerNumber": playerList.length
-        });
-        statuses[playerList.length] = {
-          position: 0,
-          eliminated: false
-        };
-        playerList.push(new Player(playerList.length, conn2));
-        startButton.classList.remove("completely-hidden");
-        updatePlayerlist();
-      });
-      conn2.on("data", handleMessage);
-    });
-    document.getElementById("hostButton").classList.add("completely-hidden");
-    document.getElementById("join").classList.add("hidden");
-    document.getElementById("roomid").classList.add("full-width");
+  hostButtom.addEventListener("click", () => {
+    console.log(peer.id);
+    host = true;
     document.getElementById("roomid").value = peer.id;
+    hostButtom.disabled = true;
+    document.getElementById("join").classList.add("hidden");
+    peer.on("connection", function(connection) {
+      conn = connection;
+      connected = true;
+      console.log("connected");
+      startButton.disabled = false;
+      startButton.classList.remove("completely-hidden");
+      conn.on("data", function(data) {
+        if (data[0] == "p") {
+          opponentPos = parseInt(data.split("|")[1]);
+        }
+        console.log(opponentPos);
+        console.log(data);
+      });
+    });
   });
-  document.getElementById("joinButton").addEventListener("click", async () => {
-    if (!peer.id)
+  joinButton.addEventListener("click", () => {
+    console.log(peer.id);
+    host = false;
+    let roomid = document.getElementById("joinid").value;
+    if (roomid.length == 0) {
+      alert("Please enter a room ID");
       return;
-    let id = document.getElementById("joinid").value;
-    if (!id)
-      return;
+    }
+    startButton.disabled = false;
+    joinButton.disabled = true;
+    hostButtom.disabled = true;
     document.getElementById("joinid").disabled = true;
-    document.getElementById("joinButton").disabled = true;
-    let connectPromise = new Promise((resolve, reject) => {
-      conn = peer.connect(id);
-      conn.on("open", () => {
-        resolve("connected");
+    document.getElementById("host").classList.add("hidden");
+    conn = peer.connect(roomid);
+    conn.on("open", function() {
+      console.log("connected");
+      conn.on("data", function(data) {
+        if (data[0] == "s") {
+          started = true;
+        }
+        if (data[0] == "p") {
+          opponentPos = parseInt(data.split("|")[1]);
+        }
+        console.log(opponentPos);
+        console.log(data);
       });
-      conn.on("error", (err) => {
-        reject(err);
-      });
-      setTimeout(() => {
-        reject("timeout");
-      }, 3e3);
-    });
-    await connectPromise.then((r) => {
-      console.log(r);
-      role = 1 /* Client */;
-      conn.on("data", handleMessage);
-      document.getElementById("joinButton").classList.add("completely-hidden");
-      document.getElementById("host").classList.add("hidden");
-      document.getElementById("joinid").classList.add("full-width");
-    }).catch((e) => {
-      console.log(e);
-      document.getElementById("joinid").disabled = false;
-      document.getElementById("joinButton").disabled = false;
     });
   });
-  startButton.addEventListener("click", (e) => {
+  startButton.addEventListener("click", () => {
+    if (!connected) {
+      return;
+    }
     started = true;
     startButton.disabled = true;
-    playerList.filter((p) => p.conn != null).forEach((p) => p.conn.send({ "type": 3 /* startGame */ }));
+    startButton.classList.add("completely-hidden");
+    conn.send("s");
   });
   document.addEventListener("keydown", (e) => {
-    if (!started)
+    if (!started) {
       return;
-    if (statuses[self.id] && statuses[self.id].eliminated)
-      return;
-    if (text[incorrectStart] == " " && !incorrect && role == 1 /* Client */ && conn) {
-      conn.send({
-        "type": 2 /* sendPosition */,
-        "player": self.id,
-        "position": incorrectStart
-      });
-    }
-    if (text[incorrectStart] == " " && !incorrect && role == 0 /* Host */) {
-      statuses[0].position = incorrectStart;
-      playerList.filter((p) => p.conn != null).forEach((p) => p.conn.send({
-        "type": 2 /* sendPosition */,
-        "player": self.id,
-        "position": incorrectStart
-      }));
     }
     if (e.key == "Backspace") {
       currentPos--;
@@ -4275,10 +4207,12 @@
     let correctText = text.slice(0, incorrectStart);
     let incorrectText = text.slice(incorrectStart, currentPos);
     incorrectText = incorrectText.replaceAll(" ", "\u2591&#8203;");
+    correctText = correctText.replaceAll(" ", "\u2591&#8203;");
     let untypedText = text.slice(currentPos, text.length);
     let formattedCorrect = `<span class = "correct">${correctText}</span>`;
     let formattedIncorrect = `<span class = "incorrect">${incorrectText}</span>`;
     let formattedUntyped = `<span class = "untyped">${untypedText}</span>`;
     typer.innerHTML = formattedCorrect + formattedIncorrect + formattedUntyped;
+    conn.send(`p|${currentPos}`);
   });
 })();

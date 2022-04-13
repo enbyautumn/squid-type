@@ -9,6 +9,16 @@ typer.innerHTML = `<span class = "untyped">${text}</span>`
 //regular expression including all valid characters you can type in the passage
 let validLetters = new RegExp(/[a-zA-Z0-9()\-:;.,?!"' ]/m)
 
+function getWords() {
+    let req = new XMLHttpRequest();
+    req.open("GET", "https://xkcd.com/simplewriter/words.js", false);
+    req.send();
+    req.response[0] = "m///o"
+    return req.response.match(/(?<=["|])(.*?)(?=["|])/gm).map(s => s.replaceAll(/[^a-zA-Z0-9()\-:;.,?!"' ]/gm, ""))
+}
+
+console.log(getWords());
+
 let currentPos = 0
 let incorrectStart = 0
 let incorrect = false
@@ -17,184 +27,115 @@ let playerlistDisplay = document.getElementById("playerlist") as HTMLUListElemen
 let statusDisplay = document.getElementById("status") as HTMLParagraphElement
 let startButton = document.getElementById("start") as HTMLButtonElement
 
-enum Role {
-    Host,
-    Client
-}
+let hostButtom = document.getElementById("hostButton") as HTMLButtonElement
+let joinButton = document.getElementById("joinButton") as HTMLButtonElement
 
-class Player {
-    id: number
-    conn: Peer.DataConnection
-    constructor(id: number, conn: Peer.DataConnection) {
-        this.id = id
-        this.conn = conn
-    }
-}
-enum MessageType {
-    updatePosition,
-    addPlayer, 
-    sendPosition,
-    startGame,
-}
-
-let self: Player = new Player(0, null)
 let peer = new Peer();
 let conn: Peer.DataConnection;
-let role: Role;
-let playerList: Player[] = [];
-let statuses = {};
-statuses[0] = {
-    "position": 0,
-    "eliminated": false,
-}
-let started = false
-let eliminated = false
+let host = false;
+let connected = false;
 
-function handleMessage(data: any) {
-    console.log(data.type as MessageType, data)
-    if (role == Role.Client) {
-        switch (data.type as MessageType) {
-            case MessageType.updatePosition:
-                statuses = data.statuses;
-                updatePlayerlist();
-                break;
-            case MessageType.addPlayer:
-                self.id = data.playerNumber;
-                statuses[data.playerNumber] = {
-                    "position": 0,
-                    "eliminated": false,
-                }
-                break;
-            case MessageType.sendPosition:
-                statuses[data.player].position = data.position;
-                break;
-            case MessageType.startGame:
-                started = true;
-                break;
-        }
-    } else if (role == Role.Host) {
-        switch (data.type as MessageType) {
-            case MessageType.sendPosition:
-                statuses[data.player].position = data.position;
-                playerList.filter(p => p.conn != null).forEach(p => p.conn.send(data))
-                break;
-        }
-    }
-}
+let opponentPos = 0;
 
-function updatePlayerlist() {
-    if (role == Role.Host) {
-        playerList.filter(p => p.conn != null).forEach(p => p.conn.send({"type": MessageType.updatePosition, "statuses": statuses}))
-    }
+let started = false;
+
+hostButtom.addEventListener("click", () => {
+    console.log(peer.id)
+    host = true;
     
-    document.querySelectorAll(".player").forEach(e => e.remove())
-    for (let id in statuses) {
-        let status = statuses[id]
-        let li = document.createElement("li")
-        li.classList.add("player")
-        li.innerText = `Player ${id} ${id == self.id.toString() ? "(You)" : ""}`
-        playerlistDisplay.appendChild(li)
-    }
-}
+    (document.getElementById("roomid") as HTMLFormElement).value = peer.id;
 
-document.getElementById("hostButton").addEventListener("click", () => {
-    if (!peer.id) return;
-    role = Role.Host
+    hostButtom.disabled = true;
+    
+    document.getElementById("join").classList.add("hidden")
 
-    playerList.push(self)
+    peer.on('connection', function(connection) {
 
-    peer.on('connection', conn => {
-        console.log("connection made")
-        conn.on('open', () => {
-            conn.send({
-                "type": MessageType.addPlayer,
-                "playerNumber": playerList.length
-            })
-            statuses[playerList.length] = {
-                position: 0,
-                eliminated: false
+        conn = connection;
+
+        connected = true;
+
+        console.log("connected")
+
+        startButton.disabled = false;
+        startButton.classList.remove("completely-hidden")
+
+        conn.on('data', function(data){
+
+            if(data[0] == "p") {
+                opponentPos = parseInt(data.split("|")[1])
             }
-            playerList.push(new Player(playerList.length, conn))
-            startButton.classList.remove("completely-hidden")
-            updatePlayerlist()
-        })
 
-        conn.on('data', handleMessage)
-    })
-    
-    document.getElementById("hostButton").classList.add("completely-hidden");
-    document.getElementById("join").classList.add("hidden");
-    document.getElementById("roomid").classList.add("full-width");
-    (document.getElementById("roomid") as HTMLInputElement).value = peer.id;
+            console.log(opponentPos)
+
+            console.log(data);
+
+        });
+    });
 })
 
-document.getElementById("joinButton").addEventListener("click", async () => {
-    if (!peer.id) return;
-    let id = (document.getElementById("joinid") as HTMLInputElement).value
-    if (!id) return;
+joinButton.addEventListener("click", () => {
+    console.log(peer.id)
+    host = false;
 
-    (document.getElementById("joinid") as HTMLInputElement).disabled = true;
-    (document.getElementById("joinButton") as HTMLButtonElement).disabled = true;
+    let roomid = (document.getElementById("joinid") as HTMLFormElement).value;
+
+    if (roomid.length == 0) {
+        alert("Please enter a room ID")
+        return;
+    }
     
-    let connectPromise = new Promise((resolve, reject) => {
-        conn = peer.connect(id)
-        conn.on("open", () => {
-            resolve("connected")
+    startButton.disabled = false;
+    joinButton.disabled = true;
+    hostButtom.disabled = true;
+    (document.getElementById("joinid") as HTMLFormElement).disabled = true;
+    document.getElementById("host").classList.add("hidden")
+
+    conn = peer.connect(roomid);
+
+    conn.on('open', function(){
+        console.log("connected");
+
+        conn.on('data', function(data){
+
+            if (data[0] == "s") {
+                started = true;
+            }
+
+            if(data[0] == "p") {
+                opponentPos = parseInt(data.split("|")[1])
+            }
+
+            console.log(opponentPos)
+
+            console.log(data);
+    
         })
-        conn.on("error", (err) => {
-            reject(err)
-        })
-        setTimeout(() => {
-            reject("timeout")
-        }, 3000)
-    })
-    await connectPromise.then(r => {
-        console.log(r);
 
-        role = Role.Client
-
-        conn.on('data', handleMessage)
-
-        document.getElementById("joinButton").classList.add("completely-hidden");
-        document.getElementById("host").classList.add("hidden");
-        document.getElementById("joinid").classList.add("full-width");    
-
-    }).catch(e => {
-        console.log(e);
-
-        (document.getElementById("joinid") as HTMLInputElement).disabled = false;
-        (document.getElementById("joinButton") as HTMLButtonElement).disabled = false;    
-    })
+    });
 })
 
-startButton.addEventListener("click", e => {
-    started = true
-    startButton.disabled = true
-    playerList.filter(p => p.conn != null).forEach(p => p.conn.send({"type": MessageType.startGame}))
+startButton.addEventListener("click", () => {
+    if (!connected) {
+        return;
+    }
+    started = true;
+    startButton.disabled = true;
+    startButton.classList.add("completely-hidden")
+
+    conn.send("s");
 })
 
 document.addEventListener("keydown", e => {
+
+    if (!started) {
+        return;
+    }
+
     // incorrectStart is the proper measure for position to send to other players
 
-    if (!started) return;
-    if (statuses[self.id] && statuses[self.id].eliminated) return;
-
-    if (text[incorrectStart] == " " && !incorrect && role == Role.Client && conn) {
-        conn.send({
-            "type": MessageType.sendPosition,
-            "player": self.id,
-            "position": incorrectStart
-        })
-    }
-
-    if (text[incorrectStart] == " " && !incorrect && role == Role.Host) {
-        statuses[0].position = incorrectStart;
-        playerList.filter(p => p.conn != null).forEach(p => p.conn.send({
-            "type": MessageType.sendPosition,
-            "player": self.id,
-            "position": incorrectStart
-        }))
-    }
+    // if (text[incorrectStart] == " " && !incorrect && role == Role.Host) {
+    // }
 
     if (e.key == "Backspace") { //on backspace, move the cursor back
         currentPos--
@@ -225,11 +166,12 @@ document.addEventListener("keydown", e => {
         incorrectStart = currentPos
     } //saves start of mistake if there is a mistake, does not otherwise
 
-
     let correctText = text.slice(0, incorrectStart)
     let incorrectText = text.slice(incorrectStart, currentPos)
     // @ts-ignore
     incorrectText = incorrectText.replaceAll(" ", "░&#8203;")
+    // @ts-ignore
+    correctText = correctText.replaceAll(" ", "░&#8203;")
     let untypedText = text.slice(currentPos, text.length)
     //gets three chunks: correct text, incorrect text, untyped text
 
@@ -239,4 +181,6 @@ document.addEventListener("keydown", e => {
 
     typer.innerHTML = formattedCorrect + formattedIncorrect + formattedUntyped
     //formats text according to type and joins it in order
+
+    conn.send(`p|${currentPos}`);
 })
