@@ -4105,7 +4105,7 @@
   var validLetters = new RegExp(/[a-zA-Z0-9()\-:;.,?!"' ]/m);
   function getWords() {
     let req = new XMLHttpRequest();
-    req.open("GET", "https://xkcd.com/simplewriter/words.js", false);
+    req.open("GET", "https://cors.evaexists.workers.dev/?url=https://xkcd.com/simplewriter/words.js", false);
     req.send();
     req.response[0] = "m///o";
     return req.response.match(/(?<=["|])(.*?)(?=["|])/gm).map((s) => s.replaceAll(/[^a-zA-Z0-9()\-:;.,?!"' ]/gm, ""));
@@ -4126,7 +4126,8 @@
   var host = false;
   var connected = false;
   var opponentPos = 0;
-  var testBar;
+  var selfBar;
+  var opponentBar;
   var started = false;
   var eliminated = false;
   function createBar(progress) {
@@ -4167,12 +4168,14 @@
       conn = connection;
       connected = true;
       console.log("connected");
+      opponentBar = createBar(0);
       startButton.disabled = false;
       startButton.classList.remove("completely-hidden");
       conn.on("data", function(data) {
         if (data[0] == "p") {
           opponentPos = parseInt(data.split("|")[1]);
         }
+        updateBar(opponentBar, opponentPos / text.length);
         console.log(opponentPos);
         console.log(data);
       });
@@ -4194,6 +4197,7 @@
     conn = peer.connect(roomid);
     conn.on("open", function() {
       console.log("connected");
+      opponentBar = createBar(0);
       conn.on("data", function(data) {
         if (data[0] == "s") {
           started = true;
@@ -4202,6 +4206,7 @@
           opponentPos = parseInt(data.split("|")[1]);
         }
         console.log(opponentPos);
+        updateBar(opponentBar, opponentPos / text.length);
         console.log(data);
       });
     });
@@ -4215,7 +4220,7 @@
     startButton.classList.add("completely-hidden");
     conn.send("s");
   });
-  testBar = createBar(0);
+  selfBar = createBar(0);
   document.addEventListener("keydown", (e) => {
     if (!started) {
       return;
@@ -4254,9 +4259,9 @@
     let formattedIncorrect = `<span class = "incorrect">${incorrectText}</span>`;
     let formattedUntyped = `<span class = "untyped">${untypedText}</span>`;
     typer.innerHTML = formattedCorrect + formattedIncorrect + formattedUntyped;
-    conn.send(`p|${currentPos}`);
-    if (testBar) {
-      updateBar(testBar, incorrectStart / text.length);
+    conn.send(`p|${incorrectStart}`);
+    if (selfBar) {
+      updateBar(selfBar, incorrectStart / text.length);
     }
   });
 })();

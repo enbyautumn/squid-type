@@ -12,7 +12,7 @@ let validLetters = new RegExp(/[a-zA-Z0-9()\-:;.,?!"' ]/m)
 
 function getWords() {
     let req = new XMLHttpRequest();
-    req.open("GET", "https://xkcd.com/simplewriter/words.js", false);
+    req.open("GET", "https://cors.evaexists.workers.dev/?url=https://xkcd.com/simplewriter/words.js", false);
     req.send();
     req.response[0] = "m///o"
     return req.response.match(/(?<=["|])(.*?)(?=["|])/gm).map(s => s.replaceAll(/[^a-zA-Z0-9()\-:;.,?!"' ]/gm, ""))
@@ -42,7 +42,8 @@ let connected = false;
 
 let opponentPos = 0;
 
-let testBar; //testBar is for debug, need to implement and create bars as they come
+let selfBar;
+let opponentBar;
 
 let started = false
 let eliminated = false
@@ -101,6 +102,9 @@ hostButtom.addEventListener("click", () => {
 
         console.log("connected")
 
+        opponentBar = createBar(0)
+
+
         startButton.disabled = false;
         startButton.classList.remove("completely-hidden")
 
@@ -109,6 +113,8 @@ hostButtom.addEventListener("click", () => {
             if(data[0] == "p") {
                 opponentPos = parseInt(data.split("|")[1])
             }
+
+            updateBar(opponentBar, opponentPos/text.length)
 
             console.log(opponentPos)
 
@@ -138,7 +144,11 @@ joinButton.addEventListener("click", () => {
     conn = peer.connect(roomid);
 
     conn.on('open', function(){
+
         console.log("connected");
+
+        opponentBar = createBar(0)
+
 
         conn.on('data', function(data){
 
@@ -151,6 +161,8 @@ joinButton.addEventListener("click", () => {
             }
 
             console.log(opponentPos)
+
+            updateBar(opponentBar, opponentPos/text.length)
 
             console.log(data);
     
@@ -171,7 +183,8 @@ startButton.addEventListener("click", () => {
 })
 
 
-testBar = createBar(0)
+selfBar = createBar(0)
+
 document.addEventListener("keydown", e => {
 
     if (!started) {
@@ -235,9 +248,9 @@ document.addEventListener("keydown", e => {
     typer.innerHTML = formattedCorrect + formattedIncorrect + formattedUntyped
     //formats text according to type and joins it in order
 
-    conn.send(`p|${currentPos}`);
+    conn.send(`p|${incorrectStart}`);
 
-    if (testBar) {
-        updateBar(testBar, incorrectStart/text.length)
+    if (selfBar) {
+        updateBar(selfBar, incorrectStart/text.length)
     }
 })
