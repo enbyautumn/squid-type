@@ -4117,7 +4117,7 @@
   var playerlistDisplay = document.getElementById("playerlist");
   var statusDisplay = document.getElementById("status");
   var startButton = document.getElementById("start");
-  var hostButtom = document.getElementById("hostButton");
+  var hostButton = document.getElementById("hostButton");
   var joinButton = document.getElementById("joinButton");
   var yellowDuration = 3e3;
   var redDuration = 4e3;
@@ -4158,11 +4158,34 @@
       }, redDuration);
     }, yellowDuration);
   }
-  hostButtom.addEventListener("click", () => {
+  function playerWin() {
+    selfBar.style.setProperty("background-color", "gold");
+    selfBar.style.setProperty("filter", "drop-shadow(0px 0px 5px gold)");
+    selfBar.innerText = "You win!";
+  }
+  function start() {
+    setTimeout(() => {
+      light.innerText = "3";
+    }, 0);
+    setTimeout(() => {
+      light.innerText = "2";
+    }, 1e3);
+    setTimeout(() => {
+      light.innerText = "1";
+    }, 2e3);
+    setTimeout(() => {
+      light.innerText = "GO!";
+      started = true;
+    }, 3e3);
+    setTimeout(() => {
+      light.innerText = "";
+    }, 3500);
+  }
+  hostButton.addEventListener("click", () => {
     console.log(peer.id);
     host = true;
     document.getElementById("roomid").value = peer.id;
-    hostButtom.disabled = true;
+    hostButton.disabled = true;
     document.getElementById("join").classList.add("hidden");
     peer.on("connection", function(connection) {
       conn = connection;
@@ -4191,7 +4214,7 @@
     }
     startButton.disabled = false;
     joinButton.disabled = true;
-    hostButtom.disabled = true;
+    hostButton.disabled = true;
     document.getElementById("joinid").disabled = true;
     document.getElementById("host").classList.add("hidden");
     conn = peer.connect(roomid);
@@ -4200,7 +4223,7 @@
       opponentBar = createBar(0);
       conn.on("data", function(data) {
         if (data[0] == "s") {
-          started = true;
+          start();
         }
         if (data[0] == "p") {
           opponentPos = parseInt(data.split("|")[1]);
@@ -4215,7 +4238,7 @@
     if (!connected) {
       return;
     }
-    started = true;
+    start();
     startButton.disabled = true;
     startButton.classList.add("completely-hidden");
     conn.send("s");
@@ -4259,9 +4282,12 @@
     let formattedIncorrect = `<span class = "incorrect">${incorrectText}</span>`;
     let formattedUntyped = `<span class = "untyped">${untypedText}</span>`;
     typer.innerHTML = formattedCorrect + formattedIncorrect + formattedUntyped;
-    conn.send(`p|${incorrectStart}`);
     if (selfBar) {
       updateBar(selfBar, incorrectStart / text.length);
+    }
+    conn.send(`p|${incorrectStart}`);
+    if (incorrectStart == text.length) {
+      playerWin();
     }
   });
 })();

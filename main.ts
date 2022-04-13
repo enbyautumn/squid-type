@@ -10,6 +10,7 @@ typer.innerHTML = `<span class = "untyped">${text}</span>`
 //regular expression including all valid characters you can type in the passage
 let validLetters = new RegExp(/[a-zA-Z0-9()\-:;.,?!"' ]/m)
 
+
 function getWords() {
     let req = new XMLHttpRequest();
     req.open("GET", "https://cors.evaexists.workers.dev/?url=https://xkcd.com/simplewriter/words.js", false);
@@ -28,7 +29,7 @@ let playerlistDisplay = document.getElementById("playerlist") as HTMLUListElemen
 let statusDisplay = document.getElementById("status") as HTMLParagraphElement
 let startButton = document.getElementById("start") as HTMLButtonElement
 
-let hostButtom = document.getElementById("hostButton") as HTMLButtonElement
+let hostButton = document.getElementById("hostButton") as HTMLButtonElement
 let joinButton = document.getElementById("joinButton") as HTMLButtonElement
 
 const yellowDuration = 3000; //delay in ms between yellow and red light
@@ -84,13 +85,40 @@ function stopLight() {
     }, yellowDuration);
 }
 
-hostButtom.addEventListener("click", () => {
+function playerWin() {
+    selfBar.style.setProperty("background-color", "gold");
+    selfBar.style.setProperty("filter", "drop-shadow(0px 0px 5px gold)")
+    selfBar.innerText = "You win!";
+}
+
+function start() {
+    setTimeout(() => {
+        light.innerText = "3"
+    }, 0);
+    setTimeout(() => {
+        light.innerText = "2"
+    }, 1000);
+    setTimeout(() => {
+        light.innerText = "1"
+    }, 2000);
+    setTimeout(() => {
+        light.innerText = "GO!"
+        started = true;
+    }, 3000);
+    
+    setTimeout(() => {
+        light.innerText = ""
+    }, 3500);
+    
+}
+
+hostButton.addEventListener("click", () => {
     console.log(peer.id)
     host = true;
     
     (document.getElementById("roomid") as HTMLFormElement).value = peer.id;
 
-    hostButtom.disabled = true;
+    hostButton.disabled = true;
     
     document.getElementById("join").classList.add("hidden")
 
@@ -137,7 +165,7 @@ joinButton.addEventListener("click", () => {
     
     startButton.disabled = false;
     joinButton.disabled = true;
-    hostButtom.disabled = true;
+    hostButton.disabled = true;
     (document.getElementById("joinid") as HTMLFormElement).disabled = true;
     document.getElementById("host").classList.add("hidden")
 
@@ -153,7 +181,7 @@ joinButton.addEventListener("click", () => {
         conn.on('data', function(data){
 
             if (data[0] == "s") {
-                started = true;
+                start();
             }
 
             if(data[0] == "p") {
@@ -175,7 +203,7 @@ startButton.addEventListener("click", () => {
     if (!connected) {
         return;
     }
-    started = true;
+    start();
     startButton.disabled = true;
     startButton.classList.add("completely-hidden")
 
@@ -247,10 +275,13 @@ document.addEventListener("keydown", e => {
 
     typer.innerHTML = formattedCorrect + formattedIncorrect + formattedUntyped
     //formats text according to type and joins it in order
-
-    conn.send(`p|${incorrectStart}`);
-
     if (selfBar) {
         updateBar(selfBar, incorrectStart/text.length)
     }
+    conn.send(`p|${incorrectStart}`);
+
+    if (incorrectStart == text.length) {
+        playerWin();
+    }
+
 })
