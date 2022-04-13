@@ -2,6 +2,7 @@ import Peer from 'peerjs';
 let clamp = (number: number, min: number, max: number) => number < min ? min : number > max ? max : number
 
 let typer = document.getElementById("typer")
+let light = document.getElementById("trafficlight")
 let text = typer.innerText
 text = text.replace(/[^a-zA-Z0-9()\-:;.,?!"' ]/g, "")
 typer.innerHTML = `<span class = "untyped">${text}</span>`
@@ -16,6 +17,9 @@ let incorrect = false
 let playerlistDisplay = document.getElementById("playerlist") as HTMLUListElement
 let statusDisplay = document.getElementById("status") as HTMLParagraphElement
 let startButton = document.getElementById("start") as HTMLButtonElement
+
+const yellowDuration = 3000; //delay in ms between yellow and red light
+const redDuration = 4000; //delay in ms between red and green light
 
 enum Role {
     Host,
@@ -47,8 +51,46 @@ statuses[0] = {
     "position": 0,
     "eliminated": false,
 }
+let testBar; //testBar is for debug, need to implement and create bars as they come
+
 let started = false
 let eliminated = false
+
+function createBar(progress) {
+    //Progress should be a decimal from 0-1, where 1 = 100%
+    if (progress < 0 || progress >= 1) {
+        console.log("invalid progress passed to createBar")
+        return null;  
+    }
+
+    let bars = document.getElementById("bars")
+    let progContainer = document.createElement("div");
+    progContainer.classList.add("progresscontainer");
+
+    let progBar = document.createElement("div");
+    progBar.classList.add("progressbar");
+
+    progBar.style.setProperty("--progress", `${progress * 100}%`);
+    console.log(`progress bar: ${progBar.style.width}`)
+    progContainer.appendChild(progBar);
+
+    bars.appendChild(progContainer);
+    return progBar
+}
+
+function updateBar(bar, progress) {
+    bar.style.setProperty("--progress", `${progress * 100}%`);
+}
+
+function stopLight() {
+    light.style.setProperty("--color", "yellow");
+    setTimeout(() => {
+        light.style.setProperty("--color", "red")
+        setTimeout(() => {
+            light.style.setProperty("--color", "green")
+        }, redDuration);
+    }, yellowDuration);
+}
 
 function handleMessage(data: any) {
     console.log(data.type as MessageType, data)
@@ -173,9 +215,10 @@ startButton.addEventListener("click", e => {
     playerList.filter(p => p.conn != null).forEach(p => p.conn.send({"type": MessageType.startGame}))
 })
 
+
+testBar = createBar(0)
 document.addEventListener("keydown", e => {
     // incorrectStart is the proper measure for position to send to other players
-
     if (!started) return;
     if (statuses[self.id] && statuses[self.id].eliminated) return;
 
@@ -204,8 +247,19 @@ document.addEventListener("keydown", e => {
         }
     }
 
+    //DEBUG KEY, REMOVE WHEN DONE
+    if (e.key == ";") {
+        stopLight();
+    }
+
     else {
         if (e.key.length == 1 && validLetters.test(e.key)) { 
+            if (light.style.getPropertyValue("--color") == "red") {
+                eliminated = true;
+                statuses[self.id].eliminated = true;
+                console.log("player eliminated")
+                //TODO
+            }
             //checks that key pressed is a valid character
             if (e.key != text[currentPos] && !incorrect) {
                 //checks beginning of mistake
@@ -239,4 +293,8 @@ document.addEventListener("keydown", e => {
 
     typer.innerHTML = formattedCorrect + formattedIncorrect + formattedUntyped
     //formats text according to type and joins it in order
+    if (testBar) {
+        updateBar(testBar, incorrectStart/text.length)
+    }
+
 })

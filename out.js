@@ -4098,6 +4098,7 @@
   var import_peerjs = __toESM(require_peerjs_min());
   var clamp = (number, min, max) => number < min ? min : number > max ? max : number;
   var typer = document.getElementById("typer");
+  var light = document.getElementById("trafficlight");
   var text = typer.innerText;
   text = text.replace(/[^a-zA-Z0-9()\-:;.,?!"' ]/g, "");
   typer.innerHTML = `<span class = "untyped">${text}</span>`;
@@ -4108,6 +4109,8 @@
   var playerlistDisplay = document.getElementById("playerlist");
   var statusDisplay = document.getElementById("status");
   var startButton = document.getElementById("start");
+  var yellowDuration = 3e3;
+  var redDuration = 4e3;
   var Player = class {
     constructor(id, conn2) {
       this.id = id;
@@ -4124,7 +4127,37 @@
     "position": 0,
     "eliminated": false
   };
+  var testBar;
   var started = false;
+  var eliminated = false;
+  function createBar(progress) {
+    if (progress < 0 || progress >= 1) {
+      console.log("invalid progress passed to createBar");
+      return null;
+    }
+    let bars = document.getElementById("bars");
+    let progContainer = document.createElement("div");
+    progContainer.classList.add("progresscontainer");
+    let progBar = document.createElement("div");
+    progBar.classList.add("progressbar");
+    progBar.style.setProperty("--progress", `${progress * 100}%`);
+    console.log(`progress bar: ${progBar.style.width}`);
+    progContainer.appendChild(progBar);
+    bars.appendChild(progContainer);
+    return progBar;
+  }
+  function updateBar(bar, progress) {
+    bar.style.setProperty("--progress", `${progress * 100}%`);
+  }
+  function stopLight() {
+    light.style.setProperty("--color", "yellow");
+    setTimeout(() => {
+      light.style.setProperty("--color", "red");
+      setTimeout(() => {
+        light.style.setProperty("--color", "green");
+      }, redDuration);
+    }, yellowDuration);
+  }
   function handleMessage(data) {
     console.log(data.type, data);
     if (role == 1 /* Client */) {
@@ -4234,6 +4267,7 @@
     startButton.disabled = true;
     playerList.filter((p) => p.conn != null).forEach((p) => p.conn.send({ "type": 3 /* startGame */ }));
   });
+  testBar = createBar(0);
   document.addEventListener("keydown", (e) => {
     if (!started)
       return;
@@ -4259,8 +4293,16 @@
       if (currentPos <= incorrectStart) {
         incorrect = false;
       }
+    }
+    if (e.key == ";") {
+      stopLight();
     } else {
       if (e.key.length == 1 && validLetters.test(e.key)) {
+        if (light.style.getPropertyValue("--color") == "red") {
+          eliminated = true;
+          statuses[self.id].eliminated = true;
+          console.log("player eliminated");
+        }
         if (e.key != text[currentPos] && !incorrect) {
           incorrectStart = currentPos;
           incorrect = true;
@@ -4280,5 +4322,8 @@
     let formattedIncorrect = `<span class = "incorrect">${incorrectText}</span>`;
     let formattedUntyped = `<span class = "untyped">${untypedText}</span>`;
     typer.innerHTML = formattedCorrect + formattedIncorrect + formattedUntyped;
+    if (testBar) {
+      updateBar(testBar, incorrectStart / text.length);
+    }
   });
 })();
