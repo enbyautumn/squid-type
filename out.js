@@ -4098,6 +4098,7 @@
   var import_peerjs = __toESM(require_peerjs_min());
   var clamp = (number, min, max) => number < min ? min : number > max ? max : number;
   var typer = document.getElementById("typer");
+  var light = document.getElementById("trafficlight");
   var text = typer.innerText;
   text = text.replace(/[^a-zA-Z0-9()\-:;.,?!"' ]/g, "");
   typer.innerHTML = `<span class = "untyped">${text}</span>`;
@@ -4118,12 +4119,44 @@
   var startButton = document.getElementById("start");
   var hostButtom = document.getElementById("hostButton");
   var joinButton = document.getElementById("joinButton");
+  var yellowDuration = 3e3;
+  var redDuration = 4e3;
   var peer = new import_peerjs.default();
   var conn;
   var host = false;
   var connected = false;
   var opponentPos = 0;
+  var testBar;
   var started = false;
+  var eliminated = false;
+  function createBar(progress) {
+    if (progress < 0 || progress >= 1) {
+      console.log("invalid progress passed to createBar");
+      return null;
+    }
+    let bars = document.getElementById("bars");
+    let progContainer = document.createElement("div");
+    progContainer.classList.add("progresscontainer");
+    let progBar = document.createElement("div");
+    progBar.classList.add("progressbar");
+    progBar.style.setProperty("--progress", `${progress * 100}%`);
+    console.log(`progress bar: ${progBar.style.width}`);
+    progContainer.appendChild(progBar);
+    bars.appendChild(progContainer);
+    return progBar;
+  }
+  function updateBar(bar, progress) {
+    bar.style.setProperty("--progress", `${progress * 100}%`);
+  }
+  function stopLight() {
+    light.style.setProperty("--color", "yellow");
+    setTimeout(() => {
+      light.style.setProperty("--color", "red");
+      setTimeout(() => {
+        light.style.setProperty("--color", "green");
+      }, redDuration);
+    }, yellowDuration);
+  }
   hostButtom.addEventListener("click", () => {
     console.log(peer.id);
     host = true;
@@ -4182,6 +4215,7 @@
     startButton.classList.add("completely-hidden");
     conn.send("s");
   });
+  testBar = createBar(0);
   document.addEventListener("keydown", (e) => {
     if (!started) {
       return;
@@ -4191,8 +4225,15 @@
       if (currentPos <= incorrectStart) {
         incorrect = false;
       }
+    }
+    if (e.key == ";") {
+      stopLight();
     } else {
       if (e.key.length == 1 && validLetters.test(e.key)) {
+        if (light.style.getPropertyValue("--color") == "red") {
+          eliminated = true;
+          console.log("player eliminated");
+        }
         if (e.key != text[currentPos] && !incorrect) {
           incorrectStart = currentPos;
           incorrect = true;
@@ -4214,5 +4255,8 @@
     let formattedUntyped = `<span class = "untyped">${untypedText}</span>`;
     typer.innerHTML = formattedCorrect + formattedIncorrect + formattedUntyped;
     conn.send(`p|${currentPos}`);
+    if (testBar) {
+      updateBar(testBar, incorrectStart / text.length);
+    }
   });
 })();

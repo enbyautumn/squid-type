@@ -2,6 +2,7 @@ import Peer from 'peerjs';
 let clamp = (number: number, min: number, max: number) => number < min ? min : number > max ? max : number
 
 let typer = document.getElementById("typer")
+let light = document.getElementById("trafficlight")
 let text = typer.innerText
 text = text.replace(/[^a-zA-Z0-9()\-:;.,?!"' ]/g, "")
 typer.innerHTML = `<span class = "untyped">${text}</span>`
@@ -30,6 +31,10 @@ let startButton = document.getElementById("start") as HTMLButtonElement
 let hostButtom = document.getElementById("hostButton") as HTMLButtonElement
 let joinButton = document.getElementById("joinButton") as HTMLButtonElement
 
+const yellowDuration = 3000; //delay in ms between yellow and red light
+const redDuration = 4000; //delay in ms between red and green light
+
+
 let peer = new Peer();
 let conn: Peer.DataConnection;
 let host = false;
@@ -37,7 +42,46 @@ let connected = false;
 
 let opponentPos = 0;
 
-let started = false;
+let testBar; //testBar is for debug, need to implement and create bars as they come
+
+let started = false
+let eliminated = false
+
+function createBar(progress) {
+    //Progress should be a decimal from 0-1, where 1 = 100%
+    if (progress < 0 || progress >= 1) {
+        console.log("invalid progress passed to createBar")
+        return null;  
+    }
+
+    let bars = document.getElementById("bars")
+    let progContainer = document.createElement("div");
+    progContainer.classList.add("progresscontainer");
+
+    let progBar = document.createElement("div");
+    progBar.classList.add("progressbar");
+
+    progBar.style.setProperty("--progress", `${progress * 100}%`);
+    console.log(`progress bar: ${progBar.style.width}`)
+    progContainer.appendChild(progBar);
+
+    bars.appendChild(progContainer);
+    return progBar
+}
+
+function updateBar(bar, progress) {
+    bar.style.setProperty("--progress", `${progress * 100}%`);
+}
+
+function stopLight() {
+    light.style.setProperty("--color", "yellow");
+    setTimeout(() => {
+        light.style.setProperty("--color", "red")
+        setTimeout(() => {
+            light.style.setProperty("--color", "green")
+        }, redDuration);
+    }, yellowDuration);
+}
 
 hostButtom.addEventListener("click", () => {
     console.log(peer.id)
@@ -126,6 +170,8 @@ startButton.addEventListener("click", () => {
     conn.send("s");
 })
 
+
+testBar = createBar(0)
 document.addEventListener("keydown", e => {
 
     if (!started) {
@@ -133,9 +179,6 @@ document.addEventListener("keydown", e => {
     }
 
     // incorrectStart is the proper measure for position to send to other players
-
-    // if (text[incorrectStart] == " " && !incorrect && role == Role.Host) {
-    // }
 
     if (e.key == "Backspace") { //on backspace, move the cursor back
         currentPos--
@@ -145,8 +188,18 @@ document.addEventListener("keydown", e => {
         }
     }
 
+    //DEBUG KEY, REMOVE WHEN DONE
+    if (e.key == ";") {
+        stopLight();
+    }
+
     else {
         if (e.key.length == 1 && validLetters.test(e.key)) { 
+            if (light.style.getPropertyValue("--color") == "red") {
+                eliminated = true;
+                console.log("player eliminated")
+                //TODO
+            }
             //checks that key pressed is a valid character
             if (e.key != text[currentPos] && !incorrect) {
                 //checks beginning of mistake
@@ -183,4 +236,8 @@ document.addEventListener("keydown", e => {
     //formats text according to type and joins it in order
 
     conn.send(`p|${currentPos}`);
+
+    if (testBar) {
+        updateBar(testBar, incorrectStart/text.length)
+    }
 })
