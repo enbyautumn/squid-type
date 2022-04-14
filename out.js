@@ -4129,7 +4129,10 @@
   var selfBar;
   var opponentBar;
   var started = false;
-  var eliminated = false;
+  function updateBar(bar, progress) {
+    bar.style.setProperty("--progress", `${progress * 100}%`);
+    bar.innerText = `${Math.round(progress * 100)}%`;
+  }
   function createBar(progress) {
     if (progress < 0 || progress >= 1) {
       console.log("invalid progress passed to createBar");
@@ -4140,41 +4143,63 @@
     progContainer.classList.add("progresscontainer");
     let progBar = document.createElement("div");
     progBar.classList.add("progressbar");
-    progBar.style.setProperty("--progress", `${progress * 100}%`);
+    updateBar(progBar, progress);
     console.log(`progress bar: ${progBar.style.width}`);
     progContainer.appendChild(progBar);
     bars.appendChild(progContainer);
     return progBar;
   }
-  function updateBar(bar, progress) {
-    bar.style.setProperty("--progress", `${progress * 100}%`);
-  }
   function stopLight() {
     light.style.setProperty("--color", "yellow");
     setTimeout(() => {
       light.style.setProperty("--color", "red");
-      setTimeout(() => {
-        light.style.setProperty("--color", "green");
-      }, redDuration);
     }, yellowDuration);
+    setTimeout(() => {
+      light.style.setProperty("--color", "green");
+    }, yellowDuration + redDuration);
   }
-  function playerWin() {
-    selfBar.style.setProperty("background-color", "gold");
-    selfBar.style.setProperty("filter", "drop-shadow(0px 0px 5px gold)");
-    selfBar.innerText = "You win!";
+  function endGame(status, elim = false) {
+    started = false;
+    light.style.setProperty("--color", "red");
+    if (status == "win") {
+      if (elim) {
+        opponentBar.style.setProperty("--barcolor", "red");
+        opponentBar.style.setProperty("overflow", "visible");
+      }
+      selfBar.style.setProperty("--barcolor", "gold");
+      selfBar.style.setProperty("--progress", "100%");
+      selfBar.innerHTML = "You&nbsp;win!";
+    } else if (status == "lose") {
+      if (elim) {
+        selfBar.style.setProperty("--barcolor", "red");
+        selfBar.style.setProperty("overflow", "visible");
+        selfBar.innerHTML = "Red&nbsp;light!";
+        opponentBar.style.setProperty("--barcolor", "gold");
+        opponentBar.style.setProperty("--progress", "100%");
+      } else {
+        selfBar.style.setProperty("overflow", "visible");
+        selfBar.innerHTML = "Too&nbsp;slow...";
+        opponentBar.style.setProperty("--barcolor", "gold");
+      }
+    } else {
+      console.log("invalid parameter passed to endGame");
+    }
   }
   function start() {
     setTimeout(() => {
       light.innerText = "3";
+      light.style.setProperty("--color", "red");
     }, 0);
     setTimeout(() => {
       light.innerText = "2";
+      light.style.setProperty("--color", "yellow");
     }, 1e3);
     setTimeout(() => {
       light.innerText = "1";
     }, 2e3);
     setTimeout(() => {
       light.innerText = "GO!";
+      light.style.setProperty("--color", "green");
       started = true;
     }, 3e3);
     setTimeout(() => {
@@ -4197,6 +4222,12 @@
       conn.on("data", function(data) {
         if (data[0] == "p") {
           opponentPos = parseInt(data.split("|")[1]);
+        }
+        if (data[0] == "w") {
+          endGame("lose");
+        }
+        if (data[0] == "l") {
+          endGame("win", true);
         }
         updateBar(opponentBar, opponentPos / text.length);
         console.log(opponentPos);
@@ -4228,6 +4259,12 @@
         if (data[0] == "p") {
           opponentPos = parseInt(data.split("|")[1]);
         }
+        if (data[0] == "w") {
+          endGame("lose");
+        }
+        if (data[0] == "l") {
+          endGame("win", true);
+        }
         console.log(opponentPos);
         updateBar(opponentBar, opponentPos / text.length);
         console.log(data);
@@ -4248,6 +4285,12 @@
     if (!started) {
       return;
     }
+    if (light.style.getPropertyValue("--color") == "red" && (e.key == "Backspace" || e.key.length == 1 && validLetters.test(e.key))) {
+      conn.send("l");
+      endGame("lose", true);
+      console.log("player eliminated");
+      return;
+    }
     if (e.key == "Backspace") {
       currentPos--;
       if (currentPos <= incorrectStart) {
@@ -4258,10 +4301,6 @@
       stopLight();
     } else {
       if (e.key.length == 1 && validLetters.test(e.key)) {
-        if (light.style.getPropertyValue("--color") == "red") {
-          eliminated = true;
-          console.log("player eliminated");
-        }
         if (e.key != text[currentPos] && !incorrect) {
           incorrectStart = currentPos;
           incorrect = true;
@@ -4287,7 +4326,8 @@
     }
     conn.send(`p|${incorrectStart}`);
     if (incorrectStart == text.length) {
-      playerWin();
+      conn.send("w");
+      endGame("win");
     }
   });
 })();

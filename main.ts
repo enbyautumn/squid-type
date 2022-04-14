@@ -49,6 +49,11 @@ let opponentBar;
 let started = false
 let eliminated = false
 
+function updateBar(bar, progress) {
+    bar.style.setProperty("--progress", `${progress * 100}%`);
+    bar.innerText = `${Math.round(progress * 100)}%`
+}
+
 function createBar(progress) {
     //Progress should be a decimal from 0-1, where 1 = 100%
     if (progress < 0 || progress >= 1) {
@@ -63,7 +68,7 @@ function createBar(progress) {
     let progBar = document.createElement("div");
     progBar.classList.add("progressbar");
 
-    progBar.style.setProperty("--progress", `${progress * 100}%`);
+    updateBar(progBar, progress)
     console.log(`progress bar: ${progBar.style.width}`)
     progContainer.appendChild(progBar);
 
@@ -71,38 +76,75 @@ function createBar(progress) {
     return progBar
 }
 
-function updateBar(bar, progress) {
-    bar.style.setProperty("--progress", `${progress * 100}%`);
-}
 
 function stopLight() {
     light.style.setProperty("--color", "yellow");
     setTimeout(() => {
         light.style.setProperty("--color", "red")
-        setTimeout(() => {
-            light.style.setProperty("--color", "green")
-        }, redDuration);
     }, yellowDuration);
+    setTimeout(() => {
+        light.style.setProperty("--color", "green")
+    }, yellowDuration + redDuration);
 }
 
-function playerWin() {
-    selfBar.style.setProperty("background-color", "gold");
-    selfBar.style.setProperty("filter", "drop-shadow(0px 0px 5px gold)")
-    selfBar.innerText = "You win!";
+function endGame(status, elim = false) {
+    started = false;
+    light.style.setProperty("--color", "red")
+    if (status == "win") {
+
+        if (elim) {
+            opponentBar.style.setProperty("--barcolor", "red")
+            opponentBar.style.setProperty("overflow", "visible")
+        }
+
+        selfBar.style.setProperty("--barcolor", "gold");
+        //selfBar.style.setProperty("filter", "drop-shadow(0px 0px 5px gold)")
+        selfBar.style.setProperty("--progress", "100%")
+        selfBar.innerHTML = "You&nbsp;win!";
+    }
+
+    else if (status == "lose") {
+        if (elim) {
+            selfBar.style.setProperty("--barcolor", "red")
+            selfBar.style.setProperty("overflow", "visible")
+            selfBar.innerHTML = "Red&nbsp;light!"
+
+            opponentBar.style.setProperty("--barcolor", "gold");
+            //opponentBar.style.setProperty("filter", "drop-shadow(0px 0px 5px gold)")
+            opponentBar.style.setProperty("--progress", "100%")
+        }
+
+        else {
+            selfBar.style.setProperty("overflow", "visible")
+            selfBar.innerHTML = "Too&nbsp;slow..."
+            
+            opponentBar.style.setProperty("--barcolor", "gold");
+            //opponentBar.style.setProperty("filter", "drop-shadow(0px 0px 5px gold)")
+        }
+
+    }
+
+    else {
+        console.log("invalid parameter passed to endGame")
+    }
 }
 
 function start() {
     setTimeout(() => {
         light.innerText = "3"
+        light.style.setProperty("--color", "red")
     }, 0);
     setTimeout(() => {
         light.innerText = "2"
+        light.style.setProperty("--color", "yellow")
     }, 1000);
     setTimeout(() => {
         light.innerText = "1"
+
     }, 2000);
     setTimeout(() => {
         light.innerText = "GO!"
+        light.style.setProperty("--color", "green")
         started = true;
     }, 3000);
     
@@ -140,6 +182,15 @@ hostButton.addEventListener("click", () => {
 
             if(data[0] == "p") {
                 opponentPos = parseInt(data.split("|")[1])
+            }
+
+            //if opponent wins, you lose, and vice-versa
+            if (data[0] == "w") {
+                endGame("lose")
+            }
+
+            if (data[0] == "l") {
+                endGame("win", true)
             }
 
             updateBar(opponentBar, opponentPos/text.length)
@@ -187,6 +238,15 @@ joinButton.addEventListener("click", () => {
             if(data[0] == "p") {
                 opponentPos = parseInt(data.split("|")[1])
             }
+            
+            //if opponent wins, you lose, and vice-versa
+            if (data[0] == "w") {
+                endGame("lose")
+            }
+
+            if (data[0] == "l") {
+                endGame("win", true)
+            }
 
             console.log(opponentPos)
 
@@ -219,6 +279,13 @@ document.addEventListener("keydown", e => {
         return;
     }
 
+    //you lose if you type in a key with a valid function during a red light
+    if (light.style.getPropertyValue("--color") == "red" && (e.key == "Backspace" || (e.key.length == 1 && validLetters.test(e.key)))) {
+        conn.send("l")
+        endGame("lose", true)
+        console.log("player eliminated")
+        return;
+    }
     // incorrectStart is the proper measure for position to send to other players
 
     if (e.key == "Backspace") { //on backspace, move the cursor back
@@ -236,11 +303,6 @@ document.addEventListener("keydown", e => {
 
     else {
         if (e.key.length == 1 && validLetters.test(e.key)) { 
-            if (light.style.getPropertyValue("--color") == "red") {
-                eliminated = true;
-                console.log("player eliminated")
-                //TODO
-            }
             //checks that key pressed is a valid character
             if (e.key != text[currentPos] && !incorrect) {
                 //checks beginning of mistake
@@ -281,7 +343,8 @@ document.addEventListener("keydown", e => {
     conn.send(`p|${incorrectStart}`);
 
     if (incorrectStart == text.length) {
-        playerWin();
+        conn.send("w");
+        endGame("win");
     }
 
 })
