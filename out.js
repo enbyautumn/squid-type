@@ -4120,7 +4120,10 @@
   var hostButton = document.getElementById("hostButton");
   var joinButton = document.getElementById("joinButton");
   var yellowDuration = 3e3;
-  var redDuration = 4e3;
+  var redDuration = 2e3;
+  var minLightInterval = 2e3;
+  var maxLightInterval = 8e3;
+  var timeouts = [];
   var peer = new import_peerjs.default();
   var conn;
   var host = false;
@@ -4129,6 +4132,7 @@
   var selfBar;
   var opponentBar;
   var started = false;
+  var curTime = Date.now();
   function updateBar(bar, progress) {
     bar.style.setProperty("--progress", `${progress * 100}%`);
     bar.innerText = `${Math.round(progress * 100)}%`;
@@ -4151,16 +4155,50 @@
   }
   function stopLight() {
     light.style.setProperty("--color", "yellow");
-    setTimeout(() => {
+    timeouts.push(setTimeout(() => {
       light.style.setProperty("--color", "red");
-    }, yellowDuration);
-    setTimeout(() => {
+    }, yellowDuration), setTimeout(() => {
       light.style.setProperty("--color", "green");
-    }, yellowDuration + redDuration);
+    }, yellowDuration + redDuration));
+  }
+  function trafficLoop() {
+    stopLight();
+    conn.send("t");
+    let delay = minLightInterval + yellowDuration + redDuration + Math.random() * (maxLightInterval - minLightInterval);
+    timeouts.push(setTimeout(trafficLoop, delay));
+    console.log(`set next light with delay ${delay} ms, id ${timeouts[timeouts.length - 1]}`);
+  }
+  function start() {
+    setTimeout(() => {
+      light.innerText = "3";
+      light.style.setProperty("--color", "red");
+    }, 0);
+    setTimeout(() => {
+      light.innerText = "2";
+      light.style.setProperty("--color", "yellow");
+    }, 1e3);
+    setTimeout(() => {
+      light.innerText = "1";
+    }, 2e3);
+    setTimeout(() => {
+      light.innerText = "GO!";
+      light.style.setProperty("--color", "green");
+      started = true;
+      if (host) {
+        setTimeout(trafficLoop, minLightInterval + Math.random() * maxLightInterval);
+      }
+    }, 3e3);
+    setTimeout(() => {
+      light.innerText = "";
+    }, 3500);
   }
   function endGame(status, elim = false) {
     started = false;
     light.style.setProperty("--color", "red");
+    for (var i = 0; i < timeouts.length; i++) {
+      clearTimeout(timeouts[i]);
+      console.log(`clearing timeout with id ${timeouts[i]}`);
+    }
     if (status == "win") {
       if (elim) {
         opponentBar.style.setProperty("--barcolor", "red");
@@ -4184,27 +4222,6 @@
     } else {
       console.log("invalid parameter passed to endGame");
     }
-  }
-  function start() {
-    setTimeout(() => {
-      light.innerText = "3";
-      light.style.setProperty("--color", "red");
-    }, 0);
-    setTimeout(() => {
-      light.innerText = "2";
-      light.style.setProperty("--color", "yellow");
-    }, 1e3);
-    setTimeout(() => {
-      light.innerText = "1";
-    }, 2e3);
-    setTimeout(() => {
-      light.innerText = "GO!";
-      light.style.setProperty("--color", "green");
-      started = true;
-    }, 3e3);
-    setTimeout(() => {
-      light.innerText = "";
-    }, 3500);
   }
   hostButton.addEventListener("click", () => {
     console.log(peer.id);
@@ -4265,9 +4282,14 @@
         if (data[0] == "l") {
           endGame("win", true);
         }
+        if (data[0] == "t") {
+          console.log(`traffic light triggered w/ delay ${Date.now() - curTime}`);
+          curTime = Date.now();
+          stopLight();
+        }
         console.log(opponentPos);
         updateBar(opponentBar, opponentPos / text.length);
-        console.log(data);
+        console.log(`not host received data: ${data}`);
       });
     });
   });

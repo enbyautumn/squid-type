@@ -33,8 +33,13 @@ let hostButton = document.getElementById("hostButton") as HTMLButtonElement
 let joinButton = document.getElementById("joinButton") as HTMLButtonElement
 
 const yellowDuration = 3000; //delay in ms between yellow and red light
-const redDuration = 4000; //delay in ms between red and green light
+const redDuration = 2000; //delay in ms between red and green light
 
+
+const minLightInterval = 2000;
+const maxLightInterval = 8000;
+
+let timeouts = [];
 
 let peer = new Peer();
 let conn: Peer.DataConnection;
@@ -48,6 +53,8 @@ let opponentBar;
 
 let started = false
 let eliminated = false
+
+let curTime = Date.now();
 
 function updateBar(bar, progress) {
     bar.style.setProperty("--progress", `${progress * 100}%`);
@@ -79,17 +86,66 @@ function createBar(progress) {
 
 function stopLight() {
     light.style.setProperty("--color", "yellow");
+
+    timeouts.push(
+        setTimeout(() => {
+            light.style.setProperty("--color", "red")
+        }, yellowDuration),
+
+        setTimeout(() => {
+            light.style.setProperty("--color", "green")
+        }, yellowDuration + redDuration)
+    );
+}
+
+function trafficLoop() {
+    stopLight();
+    conn.send("t");
+    let delay = minLightInterval + yellowDuration + redDuration + Math.random() * (maxLightInterval - minLightInterval)
+    timeouts.push(
+        setTimeout(trafficLoop, delay)
+    );
+    console.log(`set next light with delay ${delay} ms, id ${timeouts[timeouts.length - 1]}`)
+}
+
+function start() {
     setTimeout(() => {
+        light.innerText = "3"
         light.style.setProperty("--color", "red")
-    }, yellowDuration);
+    }, 0);
     setTimeout(() => {
+        light.innerText = "2"
+        light.style.setProperty("--color", "yellow")
+    }, 1000);
+    setTimeout(() => {
+        light.innerText = "1"
+
+    }, 2000);
+    setTimeout(() => {
+        light.innerText = "GO!"
         light.style.setProperty("--color", "green")
-    }, yellowDuration + redDuration);
+        started = true;
+
+        if (host) {
+            setTimeout(trafficLoop, minLightInterval + Math.random() * maxLightInterval);
+        }
+    }, 3000);
+    
+    setTimeout(() => {
+        light.innerText = ""
+    }, 3500);
+    
 }
 
 function endGame(status, elim = false) {
     started = false;
     light.style.setProperty("--color", "red")
+
+    for (var i = 0; i < timeouts.length; i++) {
+        clearTimeout(timeouts[i]);
+        console.log(`clearing timeout with id ${timeouts[i]}`)
+    }
+
     if (status == "win") {
 
         if (elim) {
@@ -127,31 +183,6 @@ function endGame(status, elim = false) {
     else {
         console.log("invalid parameter passed to endGame")
     }
-}
-
-function start() {
-    setTimeout(() => {
-        light.innerText = "3"
-        light.style.setProperty("--color", "red")
-    }, 0);
-    setTimeout(() => {
-        light.innerText = "2"
-        light.style.setProperty("--color", "yellow")
-    }, 1000);
-    setTimeout(() => {
-        light.innerText = "1"
-
-    }, 2000);
-    setTimeout(() => {
-        light.innerText = "GO!"
-        light.style.setProperty("--color", "green")
-        started = true;
-    }, 3000);
-    
-    setTimeout(() => {
-        light.innerText = ""
-    }, 3500);
-    
 }
 
 hostButton.addEventListener("click", () => {
@@ -231,28 +262,35 @@ joinButton.addEventListener("click", () => {
 
         conn.on('data', function(data){
 
-            if (data[0] == "s") {
+            if (data[0] == "s") { //game started via host's start button
                 start();
             }
 
-            if(data[0] == "p") {
+            if(data[0] == "p") { //position of opponent sent
                 opponentPos = parseInt(data.split("|")[1])
             }
             
             //if opponent wins, you lose, and vice-versa
-            if (data[0] == "w") {
+            if (data[0] == "w") { //opponent sends win message
                 endGame("lose")
             }
 
-            if (data[0] == "l") {
+            if (data[0] == "l") { //opponent sends lose message (only happens when eliminated via red light)
                 endGame("win", true)
+            }
+
+            if (data[0] == "t") //host sends signal to trigger traffic light
+            {
+                console.log(`traffic light triggered w/ delay ${Date.now() - curTime}`)
+                curTime = Date.now();
+                stopLight();
             }
 
             console.log(opponentPos)
 
             updateBar(opponentBar, opponentPos/text.length)
 
-            console.log(data);
+            console.log(`not host received data: ${data}`);
     
         })
 
