@@ -104,3 +104,17 @@ body {
     font-size: 5vh;
 }
 
+.glowred {
+    color: red;
+    filter: drop-shadow(0px 0px 4px red);
+}
+
+.glowyellow {
+    color: yellow;
+    filter: drop-shadow(0px 0px 4px yellow);
+}
+
+.glowgreen {
+    color: green;
+    filter: drop-shadow(0px 0px 4px green);
+}

@@ -4099,9 +4099,7 @@
   var clamp = (number, min, max) => number < min ? min : number > max ? max : number;
   var typer = document.getElementById("typer");
   var light = document.getElementById("trafficlight");
-  var text = typer.innerText;
-  text = text.replace(/[^a-zA-Z0-9()\-:;.,?!"' ]/g, "");
-  typer.innerHTML = `<span class = "untyped">${text}</span>`;
+  var text;
   var validLetters = new RegExp(/[a-zA-Z0-9()\-:;.,?!"' ]/m);
   function getWords() {
     let req = new XMLHttpRequest();

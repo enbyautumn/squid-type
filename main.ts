@@ -3,9 +3,8 @@ let clamp = (number: number, min: number, max: number) => number < min ? min : n
 
 let typer = document.getElementById("typer")
 let light = document.getElementById("trafficlight")
-let text = typer.innerText
-text = text.replace(/[^a-zA-Z0-9()\-:;.,?!"' ]/g, "")
-typer.innerHTML = `<span class = "untyped">${text}</span>`
+let text;
+//text = text.replace(/[^a-zA-Z0-9()\-:;.,?!"' ]/g, "")
 
 //regular expression including all valid characters you can type in the passage
 let validLetters = new RegExp(/[a-zA-Z0-9()\-:;.,?!"' ]/m)
