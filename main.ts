@@ -19,8 +19,34 @@ function getWords() {
     return req.response.match(/(?<=["|])(.*?)(?=["|])/gm).map(s => s.replaceAll(/[^a-zA-Z0-9()\-:;.,?!"' ]/gm, ""))
 }
 
-console.log(getWords());
+function generateText(count, words) {
+    let l = words.length;
+    if (count > l) {
+        console.log("tryna generate too many words")
+        return null;
+    }
 
+    let selectedWords = [];
+
+    let i = 0
+    while (i < count) {
+        let curWord = words[Math.floor(Math.random() * l)]
+        if (selectedWords.indexOf(curWord) == -1) {
+            if (Math.random() < 0.5) {
+                curWord = curWord.charAt(0).toUpperCase() + curWord.slice(1);
+            }
+            selectedWords.push(curWord)
+            i++;
+        }
+    }
+
+    return selectedWords.join(" ")
+}
+
+let possWords = getWords();
+let wordCount = 50;
+
+console.log(possWords)
 let currentPos = 0
 let incorrectStart = 0
 let incorrect = false
@@ -33,7 +59,7 @@ let hostButton = document.getElementById("hostButton") as HTMLButtonElement
 let joinButton = document.getElementById("joinButton") as HTMLButtonElement
 
 const yellowDuration = 3000; //delay in ms between yellow and red light
-const redDuration = 2000; //delay in ms between red and green light
+const redDuration = 3000; //delay in ms between red and green light
 
 
 const minLightInterval = 2000;
@@ -186,9 +212,11 @@ function endGame(status, elim = false) {
 }
 
 hostButton.addEventListener("click", () => {
-    console.log(peer.id)
+    console.log(peer.id);
     host = true;
-    
+    text = generateText(wordCount, possWords);
+    typer.innerHTML = `<span class = "untyped">${text}</span>`;
+
     (document.getElementById("roomid") as HTMLFormElement).value = peer.id;
 
     hostButton.disabled = true;
@@ -231,6 +259,8 @@ hostButton.addEventListener("click", () => {
             console.log(data);
 
         });
+
+        setTimeout(() => {conn.send("x|" + text)}, 1000) //this sucks, gotta make it better later
     });
 })
 
@@ -284,6 +314,11 @@ joinButton.addEventListener("click", () => {
                 console.log(`traffic light triggered w/ delay ${Date.now() - curTime}`)
                 curTime = Date.now();
                 stopLight();
+            }
+
+            if (data[0] == "x") {
+                text = data.split("|")[1]
+                typer.innerHTML = `<span class = "untyped">${text}}</span>`;
             }
 
             console.log(opponentPos)

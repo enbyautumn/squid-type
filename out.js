@@ -4110,7 +4110,29 @@
     req.response[0] = "m///o";
     return req.response.match(/(?<=["|])(.*?)(?=["|])/gm).map((s) => s.replaceAll(/[^a-zA-Z0-9()\-:;.,?!"' ]/gm, ""));
   }
-  console.log(getWords());
+  function generateText(count, words) {
+    let l = words.length;
+    if (count > l) {
+      console.log("tryna generate too many words");
+      return null;
+    }
+    let selectedWords = [];
+    let i = 0;
+    while (i < count) {
+      let curWord = words[Math.floor(Math.random() * l)];
+      if (selectedWords.indexOf(curWord) == -1) {
+        if (Math.random() < 0.5) {
+          curWord = curWord.charAt(0).toUpperCase() + curWord.slice(1);
+        }
+        selectedWords.push(curWord);
+        i++;
+      }
+    }
+    return selectedWords.join(" ");
+  }
+  var possWords = getWords();
+  var wordCount = 50;
+  console.log(possWords);
   var currentPos = 0;
   var incorrectStart = 0;
   var incorrect = false;
@@ -4120,7 +4142,7 @@
   var hostButton = document.getElementById("hostButton");
   var joinButton = document.getElementById("joinButton");
   var yellowDuration = 3e3;
-  var redDuration = 2e3;
+  var redDuration = 3e3;
   var minLightInterval = 2e3;
   var maxLightInterval = 8e3;
   var timeouts = [];
@@ -4226,6 +4248,8 @@
   hostButton.addEventListener("click", () => {
     console.log(peer.id);
     host = true;
+    text = generateText(wordCount, possWords);
+    typer.innerHTML = `<span class = "untyped">${text}</span>`;
     document.getElementById("roomid").value = peer.id;
     hostButton.disabled = true;
     document.getElementById("join").classList.add("hidden");
@@ -4250,6 +4274,9 @@
         console.log(opponentPos);
         console.log(data);
       });
+      setTimeout(() => {
+        conn.send("x|" + text);
+      }, 1e3);
     });
   });
   joinButton.addEventListener("click", () => {
@@ -4286,6 +4313,10 @@
           console.log(`traffic light triggered w/ delay ${Date.now() - curTime}`);
           curTime = Date.now();
           stopLight();
+        }
+        if (data[0] == "x") {
+          text = data.split("|")[1];
+          typer.innerHTML = `<span class = "untyped">${text}}</span>`;
         }
         console.log(opponentPos);
         updateBar(opponentBar, opponentPos / text.length);
