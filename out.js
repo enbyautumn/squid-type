@@ -4100,7 +4100,7 @@
   var typer = document.getElementById("typer");
   var light = document.getElementById("trafficlight");
   var text;
-  var validLetters = new RegExp(/[a-zA-Z0-9()\-:;.,?!"' ]/m);
+  var validLetters = new RegExp(/[ -~]/m);
   function getWords() {
     let req = new XMLHttpRequest();
     req.open("GET", "https://cors.evaexists.workers.dev/?url=https://xkcd.com/simplewriter/words.js", false);

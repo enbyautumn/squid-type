@@ -7,7 +7,7 @@ let text;
 //text = text.replace(/[^a-zA-Z0-9()\-:;.,?!"' ]/g, "")
 
 //regular expression including all valid characters you can type in the passage
-let validLetters = new RegExp(/[a-zA-Z0-9()\-:;.,?!"' ]/m)
+let validLetters = new RegExp(/[ -~]/m)
 
 
 function getWords() {
