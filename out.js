@@ -4259,14 +4259,16 @@
       startButton.disabled = false;
       startButton.classList.remove("completely-hidden");
       conn.on("data", function(data) {
-        if (data[0] == "p") {
-          opponentPos = parseInt(data.split("|")[1]);
-        }
-        if (data[0] == "w") {
-          endGame("lose");
-        }
-        if (data[0] == "l") {
-          endGame("win", true);
+        switch (data[0]) {
+          case "p":
+            opponentPos = parseInt(data.split("|")[1]);
+            break;
+          case "w":
+            endGame("lose");
+            break;
+          case "l":
+            endGame("win", true);
+            break;
         }
         updateBar(opponentBar, opponentPos / text.length);
         console.log(opponentPos);
@@ -4295,26 +4297,28 @@
       console.log("connected");
       opponentBar = createBar(0);
       conn.on("data", function(data) {
-        if (data[0] == "s") {
-          start();
-        }
-        if (data[0] == "p") {
-          opponentPos = parseInt(data.split("|")[1]);
-        }
-        if (data[0] == "w") {
-          endGame("lose");
-        }
-        if (data[0] == "l") {
-          endGame("win", true);
-        }
-        if (data[0] == "t") {
-          console.log(`traffic light triggered w/ delay ${Date.now() - curTime}`);
-          curTime = Date.now();
-          stopLight();
-        }
-        if (data[0] == "x") {
-          text = data.split("|")[1];
-          typer.innerHTML = `<span class = "untyped">${text}}</span>`;
+        switch (data[0]) {
+          case "s":
+            start();
+            break;
+          case "p":
+            opponentPos = parseInt(data.split("|")[1]);
+            break;
+          case "w":
+            endGame("lose");
+            break;
+          case "l":
+            endGame("win", true);
+            break;
+          case "t":
+            console.log(`traffic light triggered w/ delay ${Date.now() - curTime}`);
+            curTime = Date.now();
+            stopLight();
+            break;
+          case "x":
+            text = data.split("|")[1];
+            typer.innerHTML = `<span class = "untyped">${text}}</span>`;
+            break;
         }
         console.log(opponentPos);
         updateBar(opponentBar, opponentPos / text.length);

@@ -237,18 +237,21 @@ hostButton.addEventListener("click", () => {
         startButton.classList.remove("completely-hidden")
 
         conn.on('data', function(data){
+            switch (data[0]) {
+                case "p":
+                    opponentPos = parseInt(data.split("|")[1])
+                    break;
+                
 
-            if(data[0] == "p") {
-                opponentPos = parseInt(data.split("|")[1])
-            }
+                //if opponent wins, you lose, and vice-versa
+                case "w":
+                    endGame("lose")
+                    break;
+                
 
-            //if opponent wins, you lose, and vice-versa
-            if (data[0] == "w") {
-                endGame("lose")
-            }
-
-            if (data[0] == "l") {
-                endGame("win", true)
+                case "l":
+                    endGame("win", true)
+                    break;
             }
 
             updateBar(opponentBar, opponentPos/text.length)
@@ -290,35 +293,43 @@ joinButton.addEventListener("click", () => {
 
 
         conn.on('data', function(data){
+            switch (data[0]) {
+                case "s":  //game started via host's start button
+                    start();
+                    break;
+            
 
-            if (data[0] == "s") { //game started via host's start button
-                start();
-            }
+                case "p": //position of opponent sent
+                    opponentPos = parseInt(data.split("|")[1])
+                    break;
+                
+                
+                //if opponent wins, you lose, and vice-versa
+                case "w": //opponent sends win message
+                    endGame("lose")
+                    break;
+                
 
-            if(data[0] == "p") { //position of opponent sent
-                opponentPos = parseInt(data.split("|")[1])
+                case "l": //opponent sends lose message (only happens when eliminated via red light)
+                    endGame("win", true)
+                    break;
+                
+
+                case "t"://host sends signal to trigger traffic light
+                
+                    console.log(`traffic light triggered w/ delay ${Date.now() - curTime}`)
+                    curTime = Date.now();
+                    stopLight();
+                    break;
+                
+
+                case "x":
+                    text = data.split("|")[1]
+                    typer.innerHTML = `<span class = "untyped">${text}}</span>`;
+                    break;
             }
             
-            //if opponent wins, you lose, and vice-versa
-            if (data[0] == "w") { //opponent sends win message
-                endGame("lose")
-            }
-
-            if (data[0] == "l") { //opponent sends lose message (only happens when eliminated via red light)
-                endGame("win", true)
-            }
-
-            if (data[0] == "t") //host sends signal to trigger traffic light
-            {
-                console.log(`traffic light triggered w/ delay ${Date.now() - curTime}`)
-                curTime = Date.now();
-                stopLight();
-            }
-
-            if (data[0] == "x") {
-                text = data.split("|")[1]
-                typer.innerHTML = `<span class = "untyped">${text}}</span>`;
-            }
+            
 
             console.log(opponentPos)
 
