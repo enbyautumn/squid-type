@@ -4106,14 +4106,33 @@
     req.open("GET", "https://cors.evaexists.workers.dev/?url=https://xkcd.com/simplewriter/words.js", false);
     req.send();
     req.response[0] = "m///o";
-    return req.response.match(/(?<=["|])(.*?)(?=["|])/gm).map((s) => s.replaceAll(/[^a-zA-Z0-9()\-:;.,?!"' ]/gm, ""));
+    return req.response.match(/(?<=["|])(.*?)(?=["|])/gm).map((s) => s.replaceAll(/[^ -~]/gm, ""));
   }
+  var possWords = getWords();
+  var wordCount = 50;
+  console.log(possWords);
+  var currentPos = 0;
+  var incorrectStart = 0;
+  var incorrect = false;
+  var startButton = document.getElementById("start");
+  var hostButton = document.getElementById("hostButton");
+  var joinButton = document.getElementById("joinButton");
+  var yellowDuration = 3e3;
+  var redDuration = 3e3;
+  var minLightInterval = 2e3;
+  var maxLightInterval = 8e3;
+  var timeouts = [];
+  var peer = new import_peerjs.default();
+  var conn;
+  var host = false;
+  var connected = false;
+  var started = false;
+  var opponentPos = 0;
+  var selfBar;
+  var opponentBar;
+  var curTime = Date.now();
   function generateText(count, words) {
     let l = words.length;
-    if (count > l) {
-      console.log("tryna generate too many words");
-      return null;
-    }
     let selectedWords = [];
     let i = 0;
     while (i < count) {
@@ -4128,40 +4147,11 @@
     }
     return selectedWords.join(" ");
   }
-  var possWords = getWords();
-  var wordCount = 50;
-  console.log(possWords);
-  var currentPos = 0;
-  var incorrectStart = 0;
-  var incorrect = false;
-  var playerlistDisplay = document.getElementById("playerlist");
-  var statusDisplay = document.getElementById("status");
-  var startButton = document.getElementById("start");
-  var hostButton = document.getElementById("hostButton");
-  var joinButton = document.getElementById("joinButton");
-  var yellowDuration = 3e3;
-  var redDuration = 3e3;
-  var minLightInterval = 2e3;
-  var maxLightInterval = 8e3;
-  var timeouts = [];
-  var peer = new import_peerjs.default();
-  var conn;
-  var host = false;
-  var connected = false;
-  var opponentPos = 0;
-  var selfBar;
-  var opponentBar;
-  var started = false;
-  var curTime = Date.now();
   function updateBar(bar, progress) {
     bar.style.setProperty("--progress", `${progress * 100}%`);
     bar.innerText = `${Math.round(progress * 100)}%`;
   }
   function createBar(progress) {
-    if (progress < 0 || progress >= 1) {
-      console.log("invalid progress passed to createBar");
-      return null;
-    }
     let bars = document.getElementById("bars");
     let progContainer = document.createElement("div");
     progContainer.classList.add("progresscontainer");
@@ -4232,13 +4222,12 @@
         selfBar.style.setProperty("--barcolor", "red");
         selfBar.style.setProperty("overflow", "visible");
         selfBar.innerHTML = "Red&nbsp;light!";
-        opponentBar.style.setProperty("--barcolor", "gold");
-        opponentBar.style.setProperty("--progress", "100%");
       } else {
         selfBar.style.setProperty("overflow", "visible");
         selfBar.innerHTML = "Too&nbsp;slow...";
-        opponentBar.style.setProperty("--barcolor", "gold");
       }
+      opponentBar.style.setProperty("--barcolor", "gold");
+      opponentBar.style.setProperty("--progress", "100%");
     } else {
       console.log("invalid parameter passed to endGame");
     }
@@ -4317,7 +4306,7 @@
             break;
           case "x":
             text = data.split("|")[1];
-            typer.innerHTML = `<span class = "untyped">${text}}</span>`;
+            typer.innerHTML = `<span class = "untyped">${text}</span>`;
             break;
         }
         console.log(opponentPos);
@@ -4352,16 +4341,12 @@
         incorrect = false;
       }
     }
-    if (e.key == ";") {
-      stopLight();
-    } else {
-      if (e.key.length == 1 && validLetters.test(e.key)) {
-        if (e.key != text[currentPos] && !incorrect) {
-          incorrectStart = currentPos;
-          incorrect = true;
-        }
-        currentPos++;
+    if (e.key.length == 1 && validLetters.test(e.key)) {
+      if (e.key != text[currentPos] && !incorrect) {
+        incorrectStart = currentPos;
+        incorrect = true;
       }
+      currentPos++;
     }
     currentPos = clamp(currentPos, 0, text.length);
     if (!incorrect) {
