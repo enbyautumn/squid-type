@@ -4121,6 +4121,7 @@
   var redDuration = 3e3;
   var minLightInterval = 2e3;
   var maxLightInterval = 8e3;
+  var stop = false;
   var timeouts = [];
   var peer = new import_peerjs.default();
   var conn;
@@ -4167,8 +4168,10 @@
     light.style.setProperty("--color", "yellow");
     timeouts.push(setTimeout(() => {
       light.style.setProperty("--color", "red");
+      stop = true;
     }, yellowDuration), setTimeout(() => {
       light.style.setProperty("--color", "green");
+      stop = false;
     }, yellowDuration + redDuration));
   }
   function trafficLoop() {
@@ -4329,7 +4332,7 @@
     if (!started) {
       return;
     }
-    if (light.style.getPropertyValue("--color") == "red" && (e.key == "Backspace" || e.key.length == 1 && validLetters.test(e.key))) {
+    if (stop && (e.key == "Backspace" || e.key.length == 1 && validLetters.test(e.key))) {
       conn.send("l");
       endGame("lose", true);
       console.log("player eliminated");

@@ -35,6 +35,7 @@ const yellowDuration = 3000; //delay in ms between yellow and red light
 const redDuration = 3000; //delay in ms between red and green light
 const minLightInterval = 2000;
 const maxLightInterval = 8000;
+let stop = false;
 
 let timeouts = [];
 
@@ -104,10 +105,12 @@ function stopLight() {
     timeouts.push(
         setTimeout(() => {
             light.style.setProperty("--color", "red")
+            stop = true;
         }, yellowDuration),
 
         setTimeout(() => {
             light.style.setProperty("--color", "green")
+            stop = false;
         }, yellowDuration + redDuration)
     );
 
@@ -361,7 +364,7 @@ document.addEventListener("keydown", e => {
     }
 
     //you lose if you type in a key during a red light
-    if (light.style.getPropertyValue("--color") == "red" && (e.key == "Backspace" || (e.key.length == 1 && validLetters.test(e.key)))) {
+    if (stop && (e.key == "Backspace" || (e.key.length == 1 && validLetters.test(e.key)))) {
         conn.send("l");
         endGame("lose", true);
         console.log("player eliminated");
