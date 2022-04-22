@@ -4100,16 +4100,16 @@
   var typer = document.getElementById("typer");
   var light = document.getElementById("trafficlight");
   var text;
-  var validLetters = new RegExp(/[ -~]/m);
+  var validLetters = new RegExp(/[a-zA-Z ']/m);
   function getWords() {
     let req = new XMLHttpRequest();
-    req.open("GET", "https://cors.evaexists.workers.dev/?url=https://xkcd.com/simplewriter/words.js", false);
+    req.open("GET", "https://gist.githubusercontent.com/deekayen/4148741/raw/98d35708fa344717d8eee15d11987de6c8e26d7d/1-1000.txt", false);
     req.send();
-    req.response[0] = "m///o";
-    return req.response.match(/(?<=["|])(.*?)(?=["|])/gm).map((s) => s.replaceAll(/[^ -~]/gm, ""));
+    return req.response.split("\n");
   }
   var possWords = getWords();
   var wordCount = 50;
+  var randWord = () => possWords[Math.floor(Math.random() * wordCount)];
   console.log(possWords);
   var currentPos = 0;
   var incorrectStart = 0;
@@ -4123,7 +4123,7 @@
   var maxLightInterval = 8e3;
   var stop = false;
   var timeouts = [];
-  var peer = new import_peerjs.default();
+  var peer = new import_peerjs.default(`st-${randWord()}-${randWord()}-${randWord()}`);
   var conn;
   var host = false;
   var connected = false;
