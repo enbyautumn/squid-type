@@ -4109,7 +4109,7 @@
     return req.response.match(/(?<=["|])(.*?)(?=["|])/gm).map((s) => s.replaceAll(/[^ -~]/gm, ""));
   }
   var possWords = getWords();
-  var wordCount = 50;
+  var wordCount = 5;
   console.log(possWords);
   var currentPos = 0;
   var incorrectStart = 0;

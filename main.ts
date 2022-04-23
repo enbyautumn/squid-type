@@ -19,7 +19,7 @@ function getWords() {
 }
 
 let possWords = getWords();
-let wordCount = 50;
+let wordCount = 20;
 
 console.log(possWords);
 
