@@ -8,18 +8,19 @@ let light = document.getElementById("trafficlight");
 let text;
 
 //regular expression including all valid characters you can type in the passage
-let validLetters = new RegExp(/[ -~]/m);
+let validLetters = new RegExp(/[a-zA-Z ']/m);
 
 function getWords() {
     let req = new XMLHttpRequest();
-    req.open("GET", "https://cors.evaexists.workers.dev/?url=https://xkcd.com/simplewriter/words.js", false); //credit for word pool goes to xkcd @ https://xkcd.com/
+    req.open("GET", "https://gist.githubusercontent.com/deekayen/4148741/raw/98d35708fa344717d8eee15d11987de6c8e26d7d/1-1000.txt", false); //credit for word pool goes to xkcd @ https://xkcd.com/
     req.send();
-    req.response[0] = "m///o";
-    return req.response.match(/(?<=["|])(.*?)(?=["|])/gm).map(s => s.replaceAll(/[^ -~]/gm, ""));
+    return req.response.split("\n");
 }
 
 let possWords = getWords();
 let wordCount = 20;
+
+let randWord = () => possWords[Math.floor(Math.random() * wordCount)];
 
 console.log(possWords);
 
@@ -39,7 +40,7 @@ let stop = false;
 
 let timeouts = [];
 
-let peer = new Peer();
+let peer = new Peer(`st-${randWord()}-${randWord()}-${randWord()}`);
 let conn: Peer.DataConnection;
 let host = false;
 let connected = false;
