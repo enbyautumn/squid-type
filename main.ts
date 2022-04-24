@@ -8,11 +8,11 @@ let light = document.getElementById("trafficlight");
 let text;
 
 //regular expression including all valid characters you can type in the passage
-let validLetters = new RegExp(/[a-zA-Z ']/m);
+let validLetters = new RegExp(/[ -~]/m);
 
 function getWords() {
     let req = new XMLHttpRequest();
-    req.open("GET", "https://gist.githubusercontent.com/deekayen/4148741/raw/98d35708fa344717d8eee15d11987de6c8e26d7d/1-1000.txt", false); //credit for word pool goes to xkcd @ https://xkcd.com/
+    req.open("GET", "https://gist.githubusercontent.com/deekayen/4148741/raw/98d35708fa344717d8eee15d11987de6c8e26d7d/1-1000.txt", false); //credit for word pool goes to deekayen on GitHub @ https://github.com/deekayen
     req.send();
     return req.response.split("\n");
 }
@@ -20,7 +20,7 @@ function getWords() {
 let possWords = getWords();
 let wordCount = 20;
 
-let randWord = () => possWords[Math.floor(Math.random() * wordCount)];
+let randWord = () => possWords[Math.floor(Math.random() * possWords.length)];
 
 console.log(possWords);
 
@@ -235,6 +235,10 @@ hostButton.addEventListener("click", () => {
 
         startButton.disabled = false;
         startButton.classList.remove("completely-hidden");
+
+        conn.on('open', function() {
+            conn.send("x|" + text);
+        })
         //on opponent connection, create a new progress bar and display start button
 
         conn.on('data', function(data){
@@ -263,8 +267,6 @@ hostButton.addEventListener("click", () => {
             console.log(data);
 
         });
-
-        setTimeout(() => {conn.send("x|" + text)}, 1000); //this sucks, gotta make it better later
     });
 })
 

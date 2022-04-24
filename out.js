@@ -4100,7 +4100,7 @@
   var typer = document.getElementById("typer");
   var light = document.getElementById("trafficlight");
   var text;
-  var validLetters = new RegExp(/[a-zA-Z ']/m);
+  var validLetters = new RegExp(/[ -~]/m);
   function getWords() {
     let req = new XMLHttpRequest();
     req.open("GET", "https://gist.githubusercontent.com/deekayen/4148741/raw/98d35708fa344717d8eee15d11987de6c8e26d7d/1-1000.txt", false);
@@ -4108,8 +4108,8 @@
     return req.response.split("\n");
   }
   var possWords = getWords();
-  var wordCount = 50;
-  var randWord = () => possWords[Math.floor(Math.random() * wordCount)];
+  var wordCount = 20;
+  var randWord = () => possWords[Math.floor(Math.random() * possWords.length)];
   console.log(possWords);
   var currentPos = 0;
   var incorrectStart = 0;
@@ -4250,6 +4250,9 @@
       opponentBar = createBar(0);
       startButton.disabled = false;
       startButton.classList.remove("completely-hidden");
+      conn.on("open", function() {
+        conn.send("x|" + text);
+      });
       conn.on("data", function(data) {
         switch (data[0]) {
           case "p":
@@ -4266,9 +4269,6 @@
         console.log(opponentPos);
         console.log(data);
       });
-      setTimeout(() => {
-        conn.send("x|" + text);
-      }, 1e3);
     });
   });
   joinButton.addEventListener("click", () => {
