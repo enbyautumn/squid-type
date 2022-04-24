@@ -32,6 +32,8 @@ let startButton = document.getElementById("start") as HTMLButtonElement;
 let hostButton = document.getElementById("hostButton") as HTMLButtonElement;
 let joinButton = document.getElementById("joinButton") as HTMLButtonElement;
 
+const joinTimeout = 5000;
+
 const yellowDuration = 3000; //delay in ms between yellow and red light
 const redDuration = 3000; //delay in ms between red and green light
 const minLightInterval = 2000;
@@ -277,9 +279,10 @@ joinButton.addEventListener("click", () => {
     let roomid = (document.getElementById("joinid") as HTMLFormElement).value;
 
     if (roomid.length == 0) {
-        alert("Please enter a room ID")
+        alert("Please enter a room ID");
         return;
     }
+    conn = peer.connect(roomid);
     
     startButton.disabled = false;
     joinButton.disabled = true;
@@ -287,7 +290,17 @@ joinButton.addEventListener("click", () => {
     (document.getElementById("joinid") as HTMLFormElement).disabled = true;
     document.getElementById("host").classList.add("hidden");
 
-    conn = peer.connect(roomid);
+    peer.on("error", function(err) {
+        conn.close();
+        alert("Connection failed");
+        console.log(err.type);
+        startButton.disabled = true;
+        joinButton.disabled = false;
+        hostButton.disabled = false;
+        (document.getElementById("joinid") as HTMLFormElement).disabled = false;
+        document.getElementById("host").classList.remove("hidden");
+    })
+
 
     conn.on('open', function() {
 

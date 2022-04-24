@@ -4279,12 +4279,22 @@
       alert("Please enter a room ID");
       return;
     }
+    conn = peer.connect(roomid);
     startButton.disabled = false;
     joinButton.disabled = true;
     hostButton.disabled = true;
     document.getElementById("joinid").disabled = true;
     document.getElementById("host").classList.add("hidden");
-    conn = peer.connect(roomid);
+    peer.on("error", function(err) {
+      conn.close();
+      alert("Connection failed");
+      console.log(err.type);
+      startButton.disabled = true;
+      joinButton.disabled = false;
+      hostButton.disabled = false;
+      document.getElementById("joinid").disabled = false;
+      document.getElementById("host").classList.remove("hidden");
+    });
     conn.on("open", function() {
       console.log("connected");
       opponentBar = createBar(0);
