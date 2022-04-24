@@ -239,7 +239,7 @@ hostButton.addEventListener("click", () => {
         conn.on('open', function() {
             conn.send("x|" + text);
         })
-        //on opponent connection, create a new progress bar and display start button
+         //on opponent connection, create a new progress bar and display start button, send words to be typed
 
         conn.on('data', function(data){
             switch (data[0]) {
