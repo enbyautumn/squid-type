@@ -4132,6 +4132,14 @@
   var selfBar;
   var opponentBar;
   var curTime = Date.now();
+  function resetGUI() {
+    startButton.disabled = true;
+    startButton.classList.add("completely-hidden");
+    joinButton.disabled = false;
+    hostButton.disabled = false;
+    document.getElementById("joinid").disabled = false;
+    document.getElementById("host").classList.remove("hidden");
+  }
   function generateText(count, words) {
     let l = words.length;
     let selectedWords = [];
@@ -4245,6 +4253,10 @@
     document.getElementById("join").classList.add("hidden");
     peer.on("connection", function(connection) {
       conn = connection;
+      if (connected == true) {
+        conn.close();
+        return;
+      }
       connected = true;
       console.log("connected");
       opponentBar = createBar(0);
@@ -4289,11 +4301,7 @@
       conn.close();
       alert("Connection failed");
       console.log(err.type);
-      startButton.disabled = true;
-      joinButton.disabled = false;
-      hostButton.disabled = false;
-      document.getElementById("joinid").disabled = false;
-      document.getElementById("host").classList.remove("hidden");
+      resetGUI();
     });
     conn.on("open", function() {
       console.log("connected");

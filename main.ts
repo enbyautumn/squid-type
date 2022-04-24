@@ -55,6 +55,15 @@ let opponentBar: HTMLDivElement;
 
 let curTime = Date.now();
 
+function resetGUI() {
+    startButton.disabled = true;
+    startButton.classList.add("completely-hidden");
+    joinButton.disabled = false;
+    hostButton.disabled = false;
+    (document.getElementById("joinid") as HTMLFormElement).disabled = false;
+    document.getElementById("host").classList.remove("hidden");
+}
+
 function generateText(count, words) {
     let l = words.length;
     let selectedWords = [];
@@ -226,7 +235,14 @@ hostButton.addEventListener("click", () => {
 
     peer.on('connection', function(connection) {
 
+
         conn = connection;
+
+        if (connected == true) {
+            
+            conn.close();
+            return;
+        }
 
         connected = true;
 
@@ -294,11 +310,7 @@ joinButton.addEventListener("click", () => {
         conn.close();
         alert("Connection failed");
         console.log(err.type);
-        startButton.disabled = true;
-        joinButton.disabled = false;
-        hostButton.disabled = false;
-        (document.getElementById("joinid") as HTMLFormElement).disabled = false;
-        document.getElementById("host").classList.remove("hidden");
+        resetGUI();
     })
 
 
